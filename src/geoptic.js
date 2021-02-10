@@ -1,4 +1,24 @@
-import * as THREE from "https://unpkg.com/three@0.125.1/build/three.module.js";
+// import * as THREE from "https://unpkg.com/three@0.125.1/build/three.module.js";
+// import { TrackballControls } from "https://unpkg.com/three@0.125.1/examples/jsm/controls/TrackballControls.js";
+// import { WEBGL } from "https://unpkg.com/three@0.125.1/examples/jsm/WebGL.js";
+// import { Reflector } from "https://unpkg.com/three@0.125.1/examples/jsm/objects/Reflector.js";
+// import { RGBELoader } from "https://unpkg.com/three@0.125.1/examples/jsm/loaders/RGBELoader.js";
+// import Stats from "https://unpkg.com/three@0.125.1/examples/jsm/libs/stats.module.js";
+// import { LineSegments2 } from "https://unpkg.com/three@0.125.1/examples/jsm/lines/LineSegments2.js";
+// import { LineMaterial } from "https://unpkg.com/three@0.125.1/examples/jsm/lines/LineMaterial.js";
+// import { LineSegmentsGeometry } from "https://unpkg.com/three@0.125.1/examples/jsm/lines/LineSegmentsGeometry.js";
+
+import {
+  Vector3,
+  Box3,
+  WebGLRenderer,
+  TextureLoader,
+  PerspectiveCamera,
+  Scene,
+  Color,
+  PlaneGeometry,
+  BufferAttribute,
+} from "https://unpkg.com/three@0.125.1/build/three.module.js";
 import { TrackballControls } from "https://unpkg.com/three@0.125.1/examples/jsm/controls/TrackballControls.js";
 import { WEBGL } from "https://unpkg.com/three@0.125.1/examples/jsm/WebGL.js";
 import { Reflector } from "https://unpkg.com/three@0.125.1/examples/jsm/objects/Reflector.js";
@@ -8,12 +28,12 @@ import Stats from "https://unpkg.com/three@0.125.1/examples/jsm/libs/stats.modul
 import {
   groundPlaneVertexShader,
   groundPlaneFragmentShader,
-} from "./src/shaders.js";
-import { SurfaceMesh } from "./src/surface_mesh.js";
-import { PointCloud } from "./src/point_cloud.js";
-import { evaluatePickQuery } from "./src/pick.js";
-import { CurveNetwork } from "./src/curve_network.js";
-import { getNextUniqueColor } from "./src/color_utils.js";
+} from "./shaders.js";
+import { SurfaceMesh } from "./surface_mesh.js";
+import { PointCloud } from "./point_cloud.js";
+import { evaluatePickQuery } from "./pick.js";
+import { CurveNetwork } from "./curve_network.js";
+import { getNextUniqueColor } from "./color_utils.js";
 
 // https://stackoverflow.com/a/34452130
 dat.GUI.prototype.removeFolder = function (name) {
@@ -66,8 +86,8 @@ class Geoptic {
     this.onMeshLoad = (text) => {};
     this.userCallback = () => {};
 
-    this.sceneMin = new THREE.Vector3(0, 0, 0);
-    this.sceneMax = new THREE.Vector3(0, 0, 0);
+    this.sceneMin = new Vector3(0, 0, 0);
+    this.sceneMax = new Vector3(0, 0, 0);
   }
 
   // must be called after onload
@@ -126,17 +146,14 @@ class Geoptic {
     this.initGUI();
     this.initCamera();
     this.initScene();
-    this.initLights();
     this.initControls();
     this.initGroundPlane();
     this.addEventListeners();
   }
 
   initGroundPlane() {
-    let tex = new THREE.TextureLoader().load(
-      this.geopticPath + "/img/concrete.png"
-    );
-    this.groundPlane = new Reflector(new THREE.PlaneGeometry(100, 100), {
+    let tex = new TextureLoader().load(this.geopticPath + "/img/concrete.png");
+    this.groundPlane = new Reflector(new PlaneGeometry(100, 100), {
       clipBias: 0.003,
       textureWidth: window.innerWidth * window.devicePixelRatio,
       textureHeight: window.innerHeight * window.devicePixelRatio,
@@ -149,7 +166,7 @@ class Geoptic {
     let uvs = new Float32Array(4 * 2);
     this.groundPlane.geometry.setAttribute(
       "texture_uv",
-      new THREE.BufferAttribute(Float32Array.from([0, 0, 0, 1, 1, 0, 1, 1]), 2)
+      new BufferAttribute(Float32Array.from([0, 0, 0, 1, 1, 0, 1, 1]), 2)
     );
     this.groundPlane.rotateX(-Math.PI / 2);
     this.scene.add(this.groundPlane);
@@ -167,20 +184,20 @@ class Geoptic {
       b: undefined,
       k: undefined,
     };
-    this.matcapTextures.r = new THREE.TextureLoader().load(
+    this.matcapTextures.r = new TextureLoader().load(
       this.geopticPath + "/img/clay_r.png"
     );
-    this.matcapTextures.g = new THREE.TextureLoader().load(
+    this.matcapTextures.g = new TextureLoader().load(
       this.geopticPath + "/img/clay_g.png"
     );
-    this.matcapTextures.b = new THREE.TextureLoader().load(
+    this.matcapTextures.b = new TextureLoader().load(
       this.geopticPath + "/img/clay_b.png"
     );
-    this.matcapTextures.k = new THREE.TextureLoader().load(
+    this.matcapTextures.k = new TextureLoader().load(
       this.geopticPath + "/img/clay_k.png"
     );
 
-    // new RGBELoader().setDataType(THREE.FloatType).load(
+    // new RGBELoader().setDataType(FloatType).load(
     //   "img/clay_r.hdr",
     //   function (texture, textureData) {
     //     this.matcapTextures.r = texture;
@@ -188,47 +205,47 @@ class Geoptic {
     //     console.log(textureData);
     //   }.bind(this)
     // );
-    // new RGBELoader().setDataType(THREE.FloatType).load(
+    // new RGBELoader().setDataType(FloatType).load(
     //   "img/clay_g.hdr",
     //   function (texture, textureData) {
     //     this.matcapTextures.g = texture;
     //   }.bind(this)
     // );
-    // new RGBELoader().setDataType(THREE.UnsignedByteType).load(
+    // new RGBELoader().setDataType(UnsignedByteType).load(
     //   "img/clay_b.hdr",
     //   function (texture, textureData) {
     //     this.matcapTextures.b = texture;
 
-    //     const material = new THREE.MeshBasicMaterial({ map: texture });
-    //     const quad = new THREE.PlaneGeometry(
+    //     const material = new MeshBasicMaterial({ map: texture });
+    //     const quad = new PlaneGeometry(
     //       (1.5 * textureData.width) / textureData.height,
     //       1.5
     //     );
-    //     const mesh = new THREE.Mesh(quad, material);
+    //     const mesh = new Mesh(quad, material);
     //     mesh.translateX(2);
     //     this.scene.add(mesh);
     //   }.bind(this)
     // );
-    // new RGBELoader().setDataType(THREE.FloatType).load(
+    // new RGBELoader().setDataType(FloatType).load(
     //   "img/clay_k.hdr",
     //   function (texture, textureData) {
     //     this.matcapTextures.k = texture;
     //     console.log(texture);
     //     console.log(textureData);
 
-    //     const material = new THREE.MeshBasicMaterial({ map: texture });
-    //     const quad = new THREE.PlaneGeometry(
+    //     const material = new MeshBasicMaterial({ map: texture });
+    //     const quad = new PlaneGeometry(
     //       (1.5 * textureData.width) / textureData.height,
     //       1.5
     //     );
-    //     const mesh = new THREE.Mesh(quad, material);
+    //     const mesh = new Mesh(quad, material);
     //     this.scene.add(mesh);
     //   }.bind(this)
     // );
   }
 
   initRenderer(container) {
-    this.renderer = new THREE.WebGLRenderer({
+    this.renderer = new WebGLRenderer({
       antialias: true,
     });
     this.renderer.setPixelRatio(window.devicePixelRatio);
@@ -236,7 +253,7 @@ class Geoptic {
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.container.appendChild(this.renderer.domElement);
 
-    this.pickRenderer = new THREE.WebGLRenderer({
+    this.pickRenderer = new WebGLRenderer({
       antialias: false, // turn antialiasing off for color based picking
     });
     this.pickRenderer.setPixelRatio(window.devicePixelRatio);
@@ -277,27 +294,16 @@ class Geoptic {
     const far = 1000;
     const eyeZ = 3.5;
 
-    this.camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+    this.camera = new PerspectiveCamera(fov, aspect, near, far);
     this.camera.position.z = eyeZ;
   }
 
   initScene() {
-    this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0xffffff);
+    this.scene = new Scene();
+    this.scene.background = new Color(0xffffff);
 
-    this.pickScene = new THREE.Scene();
-    this.pickScene.background = new THREE.Color(0xffffff);
-  }
-
-  initLights() {
-    let ambient = new THREE.AmbientLight(0xffffff, 0.35);
-    this.camera.add(ambient);
-
-    let point = new THREE.PointLight(0xffffff);
-    point.position.set(2, 20, 15);
-    this.camera.add(point);
-
-    this.scene.add(this.camera);
+    this.pickScene = new Scene();
+    this.pickScene.background = new Color(0xffffff);
   }
 
   standardizeDataArray(arr) {
@@ -332,7 +338,7 @@ class Geoptic {
     this.scene.add(meshStructure.mesh);
     this.pickScene.add(meshStructure.pickMesh);
 
-    let bbox = new THREE.Box3().setFromObject(meshStructure.mesh);
+    let bbox = new Box3().setFromObject(meshStructure.mesh);
 
     this.sceneMin.min(bbox.min);
     this.sceneMax.max(bbox.max);
