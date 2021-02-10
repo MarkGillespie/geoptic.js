@@ -211,7 +211,7 @@ class SurfaceMesh {
     for (let iF = 0; iF < F; iF++) {
       let face = this.faces.get(iF);
       for (let iV = 0; iV < 3; iV++) {
-        let v = face.get(iV);
+        let v = this.getCorner(face, iV);
         for (let iD = 0; iD < 3; ++iD) {
           vertexNormals[3 * v + iD] += currNormals[3 * 3 * iF + 3 * iV + iD];
         }
@@ -236,7 +236,7 @@ class SurfaceMesh {
       for (let iV = 0; iV < 3; iV++) {
         for (let iD = 0; iD < 3; ++iD) {
           normals[3 * 3 * iF + 3 * iV + iD] =
-            vertexNormals[3 * face.get(iV) + iD];
+            vertexNormals[3 * this.getCorner(face, iV) + iD];
         }
       }
     }
@@ -292,6 +292,31 @@ class SurfaceMesh {
     // create geometry object
     let threeGeometry = new BufferGeometry();
 
+    if (faces.get(0).get) {
+      this.getCorner = function (f, iV) {
+        return f.get(iV);
+      };
+    } else if (faces.get(0)[0]) {
+      this.getCorner = function (f, iV) {
+        return f[iV];
+      };
+    }
+    if (coords.get(0)[0]) {
+      this.getDim = function (coord, iD) {
+        return coord[iD];
+      };
+    } else if (coords.get(0).x) {
+      this.getDim = function (coord, iD) {
+        if (iD == 0) {
+          return coord.x;
+        } else if (iD == 1) {
+          return coord.y;
+        } else {
+          return coord.z;
+        }
+      };
+    }
+
     // fill position and barycoord buffers
     let F = faces.size();
     let positions = new Float32Array(F * 3 * 3);
@@ -300,8 +325,9 @@ class SurfaceMesh {
     for (let iF = 0; iF < F; iF++) {
       let face = faces.get(iF);
       for (let iV = 0; iV < 3; iV++) {
+        let coord = coords.get(this.getCorner(face, iV));
         for (let iD = 0; iD < 3; ++iD) {
-          positions[3 * 3 * iF + 3 * iV + iD] = coords.get(face.get(iV))[iD];
+          positions[3 * 3 * iF + 3 * iV + iD] = this.getDim(coord, iD);
           barycoords[3 * 3 * iF + 3 * iV + iD] = iD == iV ? 1 : 0;
         }
       }
@@ -369,8 +395,11 @@ class SurfaceMesh {
     for (let iF = 0; iF < F; iF++) {
       let face = faces.get(iF);
       for (let iV = 0; iV < 3; ++iV) {
-        V = Math.max(V, face.get(iV) + 1);
-        let edgeHash = minmax(face.get(iV), face.get((iV + 1) % 3));
+        V = Math.max(V, this.getCorner(face, iV) + 1);
+        let edgeHash = minmax(
+          this.getCorner(face, iV),
+          this.getCorner(face, (iV + 1) % 3)
+        );
         if (!(edgeHash in edgeIndex)) {
           edgeIndex[edgeHash] = this.edges.length;
           this.edges.push(edgeHash);
@@ -407,15 +436,18 @@ class SurfaceMesh {
       let fColor = pickIndToVector(iF + faceGlobalPickIndStart);
 
       let vColors = [0, 1, 2].map((i) =>
-        pickIndToVector(pickStart + face.get(i))
+        pickIndToVector(pickStart + this.getCorner(face, i))
       );
       let eColors = [1, 2, 0].map((i) => {
-        let edgeHash = minmax(face.get(i), face.get((i + 1) % 3));
+        let edgeHash = minmax(
+          this.getCorner(face, i),
+          this.getCorner(face, (i + 1) % 3)
+        );
         return pickIndToVector(edgeGlobalPickIndStart + edgeIndex[edgeHash]);
       });
 
       for (let iV = 0; iV < 3; iV++) {
-        let vertex = face.get(iV);
+        let vertex = this.getCorner(face, iV);
 
         for (let iD = 0; iD < 3; ++iD) {
           faceColors[3 * 3 * iF + 3 * iV + iD] = fColor[iD];
