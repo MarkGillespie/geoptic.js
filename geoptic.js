@@ -300,7 +300,25 @@ class Geoptic {
     this.scene.add(this.camera);
   }
 
+  standardizeDataArray(arr) {
+    if (!arr.size && arr.length) {
+      arr.size = function () {
+        return arr.length;
+      };
+    }
+    if (!arr.get && arr[0]) {
+      arr.get = function (i) {
+        return arr[i];
+      };
+    }
+  }
+
   registerSurfaceMesh(name, vertexCoordinates, faces, scale = 1) {
+    this.standardizeDataArray(vertexCoordinates);
+    this.standardizeDataArray(faces);
+    console.log(vertexCoordinates);
+    console.log(faces);
+
     if (!this.structureGuiMeshes) {
       this.structureGuiMeshes = this.structureGui.addFolder("Surface Meshes");
       this.structureGuiMeshes.open();
@@ -509,6 +527,10 @@ class Geoptic {
     let messageBuffer = document.getElementById("messages");
     messageBuffer.insertBefore(message, messageBuffer.firstChild);
     message.innerHTML = str;
+  }
+
+  doneLoading() {
+    document.getElementById("spinner").style.display = "none";
   }
 
   prettyVector(vec) {
