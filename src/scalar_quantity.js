@@ -96,6 +96,11 @@ class VertexScalarQuantity {
     }
   }
 
+  setColorMap(cm) {
+    this.guiFields[this.prefix + "#ColorMap"] = cm;
+    this.applyColorMap(cm);
+  }
+
   initializeColorMap() {
     let F = this.parent.faces.size();
     let colors = new Float32Array(F * 3 * 3);
