@@ -49,6 +49,8 @@ class SurfaceMesh {
 
     let quantityGui = this.guiFolder.addFolder(name);
     this.quantities[name].initGui(this.guiFields, quantityGui);
+
+    return this.quantities[name];
   }
 
   addVertexVectorQuantity(name, values) {
@@ -56,6 +58,8 @@ class SurfaceMesh {
 
     let quantityGui = this.guiFolder.addFolder(name);
     this.quantities[name].initGui(this.guiFields, quantityGui);
+
+    return this.quantities[name];
   }
 
   initGui(guiFields, guiFolder) {

@@ -147,10 +147,10 @@ function createVertexScalarFunctionMaterial(tex_r, tex_g, tex_b, tex_k) {
             float alpha = getEdgeFactor(Barycoord, vec3(1.,1.,1.), edgeWidth);
             vec2 coord = Point * 0.95; // pull slightly inward, to reduce sampling artifacts near edges
 
-            vec4 mat_r = texture2D(Matcap_r, coord);
-            vec4 mat_g = texture2D(Matcap_g, coord);
-            vec4 mat_b = texture2D(Matcap_b, coord);
-            vec4 mat_k = texture2D(Matcap_k, coord);
+            vec4 mat_r = gammaCorrect(texture2D(Matcap_r, coord));
+            vec4 mat_g = gammaCorrect(texture2D(Matcap_g, coord));
+            vec4 mat_b = gammaCorrect(texture2D(Matcap_b, coord));
+            vec4 mat_k = gammaCorrect(texture2D(Matcap_k, coord));
 
             vec4 colorCombined = Color.r * mat_r + Color.g * mat_g + Color.b * mat_b +
                                 (1. - Color.r - Color.g - Color.b) * mat_k;

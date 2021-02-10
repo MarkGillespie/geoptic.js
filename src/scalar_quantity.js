@@ -110,7 +110,7 @@ class VertexScalarQuantity {
     for (let iF = 0; iF < F; iF++) {
       let face = this.parent.faces.get(iF);
       for (let iV = 0; iV < 3; iV++) {
-        let value = this.values[face.get(iV)];
+        let value = this.values[this.parent.getCorner(face, iV)];
         let color = applyColorMap(cm, value, this.dataMin, this.dataMax);
 
         colors[3 * 3 * iF + 3 * iV + 0] = color.r;
@@ -123,7 +123,7 @@ class VertexScalarQuantity {
   }
 
   getVertexValue(iV) {
-    return this.values[iV];
+    return this.ps.prettyScalar(this.values[iV]);
   }
   getEdgeValue(iE) {
     return undefined;

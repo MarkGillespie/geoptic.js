@@ -58,7 +58,7 @@ class Geoptic {
     this.structureGuiCurveNetworks = undefined;
     this.structureGuiPointClouds = undefined;
 
-    this.commandGui = new dat.GUI();
+    this.commandGui = new dat.GUI({ resizeable: true });
     this.commandGuiFields = {};
 
     this.groundPlane = undefined;
@@ -531,16 +531,32 @@ class Geoptic {
     document.getElementById("spinner").style.display = "none";
   }
 
+  prettyScalar(d) {
+    return d.toFixed(5);
+  }
+
   prettyVector(vec) {
-    return (
-      "(" +
-      vec[0].toFixed(2) +
-      ", " +
-      vec[1].toFixed(2) +
-      ", " +
-      vec[2].toFixed(2) +
-      ")"
-    );
+    if (vec[0]) {
+      return (
+        "(" +
+        vec[0].toFixed(2) +
+        ", " +
+        vec[1].toFixed(2) +
+        ", " +
+        vec[2].toFixed(2) +
+        ")"
+      );
+    } else if (vec.x) {
+      return (
+        "(" +
+        vec.x.toFixed(2) +
+        ", " +
+        vec.y.toFixed(2) +
+        ", " +
+        vec.z.toFixed(2) +
+        ")"
+      );
+    }
   }
 }
 
