@@ -28,8 +28,10 @@ dat.GUI.prototype.removeFolder = function (name) {
 };
 
 class Geoptic {
-  constructor() {
+  constructor(path = "js/geoptic.js") {
     if (!WEBGL.isWebGLAvailable()) alert(WEBGL.getWebGLErrorMessage());
+
+    this.geopticPath = path;
 
     this.input = undefined;
 
@@ -131,7 +133,9 @@ class Geoptic {
   }
 
   initGroundPlane() {
-    let tex = new THREE.TextureLoader().load("img/concrete.png");
+    let tex = new THREE.TextureLoader().load(
+      this.geopticPath + "/img/concrete.png"
+    );
     this.groundPlane = new Reflector(new THREE.PlaneGeometry(100, 100), {
       clipBias: 0.003,
       textureWidth: window.innerWidth * window.devicePixelRatio,
@@ -163,10 +167,18 @@ class Geoptic {
       b: undefined,
       k: undefined,
     };
-    this.matcapTextures.r = new THREE.TextureLoader().load("img/clay_r.png");
-    this.matcapTextures.g = new THREE.TextureLoader().load("img/clay_g.png");
-    this.matcapTextures.b = new THREE.TextureLoader().load("img/clay_b.png");
-    this.matcapTextures.k = new THREE.TextureLoader().load("img/clay_k.png");
+    this.matcapTextures.r = new THREE.TextureLoader().load(
+      this.geopticPath + "/img/clay_r.png"
+    );
+    this.matcapTextures.g = new THREE.TextureLoader().load(
+      this.geopticPath + "/img/clay_g.png"
+    );
+    this.matcapTextures.b = new THREE.TextureLoader().load(
+      this.geopticPath + "/img/clay_b.png"
+    );
+    this.matcapTextures.k = new THREE.TextureLoader().load(
+      this.geopticPath + "/img/clay_k.png"
+    );
 
     // new RGBELoader().setDataType(THREE.FloatType).load(
     //   "img/clay_r.hdr",
