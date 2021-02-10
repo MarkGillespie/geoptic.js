@@ -8,12 +8,12 @@ import Stats from "https://unpkg.com/three@0.125.1/examples/jsm/libs/stats.modul
 import {
   groundPlaneVertexShader,
   groundPlaneFragmentShader,
-} from "./src/shaders.js";
-import { SurfaceMesh } from "./src/surface_mesh.js";
-import { PointCloud } from "./src/point_cloud.js";
-import { evaluatePickQuery } from "./src/pick.js";
-import { CurveNetwork } from "./src/curve_network.js";
-import { getNextUniqueColor } from "./src/color_utils.js";
+} from "./shaders.js";
+import { SurfaceMesh } from "./surface_mesh.js";
+import { PointCloud } from "./point_cloud.js";
+import { evaluatePickQuery } from "./pick.js";
+import { CurveNetwork } from "./curve_network.js";
+import { getNextUniqueColor } from "./color_utils.js";
 
 // https://stackoverflow.com/a/34452130
 dat.GUI.prototype.removeFolder = function (name) {
