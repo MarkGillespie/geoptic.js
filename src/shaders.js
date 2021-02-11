@@ -19,13 +19,6 @@ let common = `
             float e = 1.0 - min(min(dist.x, dist.y), dist.z);
             return e;
         }
-
-
-        vec4 gammaCorrect( vec4 colorLinear )
-        {
-        const float screenGamma = 2.2;
-        return vec4(pow(colorLinear.rgb, vec3(1./screenGamma)), colorLinear.a);
-        }
 `;
 
 function createMatCapMaterial(tex_r, tex_g, tex_b, tex_k) {
@@ -40,8 +33,9 @@ function createMatCapMaterial(tex_r, tex_g, tex_b, tex_k) {
             vec3 vNormal = ( mat3( modelViewMatrix ) * normal );
             vNormal = normalize(vNormal);
 
-            Point.x = vNormal.x * 0.5 + 0.5;
-            Point.y = vNormal.y * 0.5 + 0.5;
+            // pull slightly inward, to reduce sampling artifacts near edges
+            Point.x = 0.93 * vNormal.x * 0.5 + 0.5;
+            Point.y = 0.93 * vNormal.y * 0.5 + 0.5;
 
             Barycoord = barycoord;
 
@@ -68,12 +62,12 @@ function createMatCapMaterial(tex_r, tex_g, tex_b, tex_k) {
 
 
             float alpha = getEdgeFactor(Barycoord, vec3(1.,1.,1.), edgeWidth);
-            vec2 coord = Point * 0.95; // pull slightly inward, to reduce sampling artifacts near edges
+            vec2 coord = Point;
 
-            vec4 mat_r = gammaCorrect(texture2D(Matcap_r, coord));
-            vec4 mat_g = gammaCorrect(texture2D(Matcap_g, coord));
-            vec4 mat_b = gammaCorrect(texture2D(Matcap_b, coord));
-            vec4 mat_k = gammaCorrect(texture2D(Matcap_k, coord));
+            vec4 mat_r = sRGBToLinear(texture2D(Matcap_r, coord));
+            vec4 mat_g = sRGBToLinear(texture2D(Matcap_g, coord));
+            vec4 mat_b = sRGBToLinear(texture2D(Matcap_b, coord));
+            vec4 mat_k = sRGBToLinear(texture2D(Matcap_k, coord));
 
             vec4 colorCombined = color.r * mat_r + color.g * mat_g + color.b * mat_b +
                                 (1. - color.r - color.g - color.b) * mat_k;
@@ -82,6 +76,7 @@ function createMatCapMaterial(tex_r, tex_g, tex_b, tex_k) {
                                 (1. - edgeColor.r - edgeColor.g - edgeColor.b) * mat_k;
 
             gl_FragColor = (1.-alpha) * colorCombined + alpha * edgeColorCombined;
+            gl_FragColor = LinearTosRGB( gl_FragColor );
         }
     `;
 
@@ -116,8 +111,9 @@ function createVertexScalarFunctionMaterial(tex_r, tex_g, tex_b, tex_k) {
             vec3 vNormal = ( mat3( modelViewMatrix ) * normal );
             vNormal = normalize(vNormal);
 
-            Point.x = vNormal.x * 0.5 + 0.5;
-            Point.y = vNormal.y * 0.5 + 0.5;
+            // pull slightly inward, to reduce sampling artifacts near edges
+            Point.x = 0.93 * vNormal.x * 0.5 + 0.5;
+            Point.y = 0.93 * vNormal.y * 0.5 + 0.5;
 
             Barycoord = barycoord;
             Color = color;
@@ -145,12 +141,12 @@ function createVertexScalarFunctionMaterial(tex_r, tex_g, tex_b, tex_k) {
 
 
             float alpha = getEdgeFactor(Barycoord, vec3(1.,1.,1.), edgeWidth);
-            vec2 coord = Point * 0.95; // pull slightly inward, to reduce sampling artifacts near edges
+            vec2 coord = Point;
 
-            vec4 mat_r = gammaCorrect(texture2D(Matcap_r, coord));
-            vec4 mat_g = gammaCorrect(texture2D(Matcap_g, coord));
-            vec4 mat_b = gammaCorrect(texture2D(Matcap_b, coord));
-            vec4 mat_k = gammaCorrect(texture2D(Matcap_k, coord));
+            vec4 mat_r = sRGBToLinear(texture2D(Matcap_r, coord));
+            vec4 mat_g = sRGBToLinear(texture2D(Matcap_g, coord));
+            vec4 mat_b = sRGBToLinear(texture2D(Matcap_b, coord));
+            vec4 mat_k = sRGBToLinear(texture2D(Matcap_k, coord));
 
             vec4 colorCombined = Color.r * mat_r + Color.g * mat_g + Color.b * mat_b +
                                 (1. - Color.r - Color.g - Color.b) * mat_k;
@@ -159,6 +155,7 @@ function createVertexScalarFunctionMaterial(tex_r, tex_g, tex_b, tex_k) {
                                 (1. - edgeColor.r - edgeColor.g - edgeColor.b) * mat_k;
 
             gl_FragColor = (1.-alpha) * colorCombined + alpha * edgeColorCombined;
+            gl_FragColor = LinearTosRGB( gl_FragColor );
         }
     `;
 
@@ -325,8 +322,9 @@ function createInstancedMatCapMaterial(tex_r, tex_g, tex_b, tex_k) {
             vec3 vNormal = (modelViewMatrix * instanceMatrix * vec4(normal, 0.)).xyz;
             vNormal = normalize(vNormal);
 
-            Point.x = vNormal.x * 0.5 + 0.5;
-            Point.y = vNormal.y * 0.5 + 0.5;
+            // pull slightly inward, to reduce sampling artifacts near edges
+            Point.x = 0.93 * vNormal.x * 0.5 + 0.5;
+            Point.y = 0.93 * vNormal.y * 0.5 + 0.5;
 
             gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4( scale * position, 1.0 );
 
@@ -346,18 +344,18 @@ function createInstancedMatCapMaterial(tex_r, tex_g, tex_b, tex_k) {
 
         void main(void){
 
+            vec2 coord = Point;
 
-            vec2 coord = Point * 0.95; // pull slightly inward, to reduce sampling artifacts near edges
-
-            vec4 mat_r = gammaCorrect(texture2D(Matcap_r, coord));
-            vec4 mat_g = gammaCorrect(texture2D(Matcap_g, coord));
-            vec4 mat_b = gammaCorrect(texture2D(Matcap_b, coord));
-            vec4 mat_k = gammaCorrect(texture2D(Matcap_k, coord));
+            vec4 mat_r = sRGBToLinear(texture2D(Matcap_r, coord));
+            vec4 mat_g = sRGBToLinear(texture2D(Matcap_g, coord));
+            vec4 mat_b = sRGBToLinear(texture2D(Matcap_b, coord));
+            vec4 mat_k = sRGBToLinear(texture2D(Matcap_k, coord));
 
             vec4 colorCombined = color.r * mat_r + color.g * mat_g + color.b * mat_b +
                                 (1. - color.r - color.g - color.b) * mat_k;
 
             gl_FragColor = colorCombined;
+            gl_FragColor = LinearTosRGB( gl_FragColor );
         }
     `;
 
@@ -390,8 +388,9 @@ function createInstancedScalarFunctionMaterial(tex_r, tex_g, tex_b, tex_k) {
             vec3 vNormal = (modelViewMatrix * instanceMatrix * vec4(normal, 0.)).xyz;
             vNormal = normalize(vNormal);
 
-            Point.x = vNormal.x * 0.5 + 0.5;
-            Point.y = vNormal.y * 0.5 + 0.5;
+            // pull slightly inward, to reduce sampling artifacts near edges
+            Point.x = 0.93 * vNormal.x * 0.5 + 0.5;
+            Point.y = 0.93 * vNormal.y * 0.5 + 0.5;
 
             Color = color;
 
@@ -413,18 +412,18 @@ function createInstancedScalarFunctionMaterial(tex_r, tex_g, tex_b, tex_k) {
 
         void main(void){
 
+            vec2 coord = Point;
 
-            vec2 coord = Point * 0.95; // pull slightly inward, to reduce sampling artifacts near edges
-
-            vec4 mat_r = gammaCorrect(texture2D(Matcap_r, coord));
-            vec4 mat_g = gammaCorrect(texture2D(Matcap_g, coord));
-            vec4 mat_b = gammaCorrect(texture2D(Matcap_b, coord));
-            vec4 mat_k = gammaCorrect(texture2D(Matcap_k, coord));
+            vec4 mat_r = sRGBToLinear(texture2D(Matcap_r, coord));
+            vec4 mat_g = sRGBToLinear(texture2D(Matcap_g, coord));
+            vec4 mat_b = sRGBToLinear(texture2D(Matcap_b, coord));
+            vec4 mat_k = sRGBToLinear(texture2D(Matcap_k, coord));
 
             vec4 colorCombined = Color.r * mat_r + Color.g * mat_g + Color.b * mat_b +
                                 (1. - Color.r - Color.g - Color.b) * mat_k;
 
             gl_FragColor = colorCombined;
+            gl_FragColor = LinearTosRGB( gl_FragColor );
         }
     `;
 
