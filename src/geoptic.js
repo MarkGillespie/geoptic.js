@@ -298,6 +298,7 @@ class Geoptic {
   }
 
   registerCurveNetwork(name, vertexCoordinates, edges) {
+    this.standardizeDataArray(vertexCoordinates);
     if (!this.structureGuiCurveNetworks) {
       this.structureGuiCurveNetworks = this.structureGui.addFolder(
         "Curve Networks"
@@ -333,6 +334,7 @@ class Geoptic {
   }
 
   registerPointCloud(name, vertexCoordinates) {
+    this.standardizeDataArray(vertexCoordinates);
     if (!this.structureGuiPointCluods) {
       this.structureGuiPointClouds = this.structureGui.addFolder(
         "Point Clouds"
@@ -511,6 +513,10 @@ class Geoptic {
         ")"
       );
     }
+  }
+
+  listToVec(list) {
+    return new THREE.Vector3(list[0], list[1], list[2]);
   }
 }
 

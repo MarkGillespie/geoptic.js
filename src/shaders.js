@@ -477,6 +477,72 @@ function createPointCloudPickMaterial() {
   return Material;
 }
 
+function createCurveMatCapMaterial(tex_r, tex_g, tex_b, tex_k) {
+  let vertexShader = `
+        uniform float rad;
+        attribute float len;
+
+        varying vec2 Point;
+
+        void main()
+        {
+            vec3 vNormal = (modelViewMatrix * instanceMatrix * vec4(normal, 0.)).xyz;
+            vNormal = normalize(vNormal);
+
+            // pull slightly inward, to reduce sampling artifacts near edges
+            Point.x = 0.93 * vNormal.x * 0.5 + 0.5;
+            Point.y = 0.93 * vNormal.y * 0.5 + 0.5;
+
+            vec3 scaled_position = vec3(position.x * rad, position.y*rad, position.z*len);
+            gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4( scaled_position, 1.0 );
+
+        }
+    `;
+
+  let fragmentShader = `
+        uniform sampler2D Matcap_r; // Matcap texture
+        uniform sampler2D Matcap_g; // Matcap texture
+        uniform sampler2D Matcap_b; // Matcap texture
+        uniform sampler2D Matcap_k; // Matcap texture
+        uniform vec3 color;
+
+        varying vec2 Point;
+
+        ${common}
+
+        void main(void){
+
+            vec2 coord = Point;
+
+            vec4 mat_r = sRGBToLinear(texture2D(Matcap_r, coord));
+            vec4 mat_g = sRGBToLinear(texture2D(Matcap_g, coord));
+            vec4 mat_b = sRGBToLinear(texture2D(Matcap_b, coord));
+            vec4 mat_k = sRGBToLinear(texture2D(Matcap_k, coord));
+
+            vec4 colorCombined = color.r * mat_r + color.g * mat_g + color.b * mat_b +
+                                (1. - color.r - color.g - color.b) * mat_k;
+
+            gl_FragColor = colorCombined;
+            gl_FragColor = LinearTosRGB( gl_FragColor );
+        }
+    `;
+
+  let Material = new ShaderMaterial({
+    uniforms: {
+      Matcap_r: { value: tex_r },
+      Matcap_g: { value: tex_g },
+      Matcap_b: { value: tex_b },
+      Matcap_k: { value: tex_k },
+      color: { value: new Vector3(1, 0, 1) },
+      rad: { value: 1 },
+    },
+    vertexShader,
+    fragmentShader,
+  });
+
+  return Material;
+}
+
 export {
   createMatCapMaterial,
   createInstancedMatCapMaterial,
@@ -484,6 +550,7 @@ export {
   createInstancedScalarFunctionMaterial,
   createSurfaceMeshPickMaterial,
   createPointCloudPickMaterial,
+  createCurveMatCapMaterial,
   groundPlaneVertexShader,
   groundPlaneFragmentShader,
 };

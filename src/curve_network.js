@@ -1,20 +1,31 @@
-import { Vector3 } from "https://unpkg.com/three@0.125.1/build/three.module.js";
+import {
+  Group,
+  Vector3,
+  CylinderGeometry,
+  SphereGeometry,
+  InstancedMesh,
+  InstancedBufferAttribute,
+  Matrix4,
+} from "https://unpkg.com/three@0.125.1/build/three.module.js";
 
-import { LineSegments2 } from "https://unpkg.com/three@0.125.1/examples/jsm/lines/LineSegments2.js";
-import { LineMaterial } from "https://unpkg.com/three@0.125.1/examples/jsm/lines/LineMaterial.js";
-import { LineSegmentsGeometry } from "https://unpkg.com/three@0.125.1/examples/jsm/lines/LineSegmentsGeometry.js";
+import {
+  createCurveMatCapMaterial,
+  createInstancedMatCapMaterial,
+} from "./shaders.js";
 
 import { getNextUniqueColor } from "./color_utils.js";
 
 class CurveNetwork {
   constructor(vertices, segments, maxLen, name, polyscopeEnvironment) {
     this.ps = polyscopeEnvironment;
+    this.res = 12;
 
-    [this.mesh, this.geo] = this.constructThreeCurveNetwork(
-      vertices,
-      segments,
-      maxLen
-    );
+    [
+      this.mesh,
+      this.tubeMesh,
+      this.pointMesh,
+    ] = this.constructThreeCurveNetwork(vertices, segments, maxLen);
+
     this.segments = segments;
     this.maxLen = maxLen;
     this.name = name;
@@ -42,26 +53,33 @@ class CurveNetwork {
   }
 
   updateVertexPositions(newPositions) {
-    // fill position buffer
-    let positions = new Float32Array(this.segments.length * 2 * 3);
+    const lengths = this.tubeMesh.geometry.attributes.len.array;
+    let mat = new Matrix4();
     for (let iS = 0; iS < this.segments.length; iS++) {
-      for (let iV = 0; iV < 2; ++iV) {
-        for (let iD = 0; iD < 3; ++iD) {
-          positions[3 * 2 * iS + 3 * iV + iD] =
-            newPositions[this.segments[iS][iV]][iD];
-        }
-      }
+      let start = this.ps.listToVec(newPositions[this.segments[iS][0]]);
+      let end = this.ps.listToVec(newPositions[this.segments[iS][1]]);
+      let offset = new Vector3();
+      offset.subVectors(start, end); // offset = start - end
+
+      lengths[iS] = offset.length();
+      mat.lookAt(new Vector3(0, 0, 0), offset, new Vector3(0, 0, 1));
+      mat.setPosition(start.x, start.y, start.z);
+      this.tubeMesh.setMatrixAt(iS, mat);
+      this.pointMesh.setMatrixAt(this.segments[iS][0], mat);
+      this.pointMesh.setMatrixAt(this.segments[iS][1], mat);
     }
-
-    this.mesh.geometry.setPositions(positions, 3);
-
-    this.mesh.geometry.attributes.instanceStart.needsUpdate = true;
-    this.mesh.geometry.attributes.instanceEnd.needsUpdate = true;
+    this.tubeMesh.geometry.attributes.len.needsUpdate = true;
   }
 
   setColor(color) {
     let c = new Vector3(color[0] / 255, color[1] / 255, color[2] / 255);
-    this.mesh.material.color = c;
+    this.tubeMesh.material.uniforms.color.value = c;
+    this.pointMesh.material.uniforms.color.value = c;
+  }
+
+  setEdgeWidth(width) {
+    this.tubeMesh.material.uniforms.rad.value = width / 100;
+    this.pointMesh.material.uniforms.scale.value = width / 100;
   }
 
   initGui(guiFields, guiFolder) {
@@ -87,14 +105,15 @@ class CurveNetwork {
       .listen()
       .name("Color");
 
-    guiFields[this.name + "#Width"] = 5;
+    guiFields[this.name + "#Width"] = 1;
+    this.setEdgeWidth(guiFields[this.name + "#Width"]);
     guiFolder
       .add(guiFields, this.name + "#Width")
       .min(0)
       .max(50)
       .step(0.25)
       .onChange((width) => {
-        this.mesh.material.linewidth = width / 1000;
+        this.setEdgeWidth(width);
       })
       .listen()
       .name("Edge Width");
@@ -104,32 +123,80 @@ class CurveNetwork {
 
   constructThreeCurveNetwork(vertices, segments, maxLen) {
     // create geometry object
-    let threeGeometry = new LineSegmentsGeometry();
+    let tubeGeometry = new CylinderGeometry(1, 1, 1, this.res);
+    let sphereGeometry = new SphereGeometry(1, this.res, this.res);
 
-    // fill position and color buffers
-    let positions = new Float32Array(segments.length * 2 * 3);
-    for (let iS = 0; iS < segments.length; iS++) {
-      for (let iV = 0; iV < 2; ++iV) {
-        for (let iD = 0; iD < 3; ++iD) {
-          positions[3 * 2 * iS + 3 * iV + iD] = vertices[segments[iS][iV]][iD];
-        }
-      }
+    // By default, the cylinder is vertically centered. But I want it to go upwards
+    // from the origin, so I translate all of its vertices up by height/2
+    let positions = tubeGeometry.attributes.position.array;
+    let V = tubeGeometry.attributes.position.count;
+    let minY = -0.5;
+    for (let i = 0; i < V; i++) {
+      positions[3 * i + 1] = positions[3 * i + 1] - minY;
     }
 
-    threeGeometry.setPositions(positions, 3);
+    // Rotate tube so that look-at points the tube in the given direction
+    let mat = new Matrix4();
+    // prettier-ignore
+    mat.set(0, 0, 1, 0,
+            1, 0, 0, 0,
+            0, 1, 0, 0,
+            0, 0, 0, 1);
+    tubeGeometry.applyMatrix4(mat);
+    sphereGeometry.applyMatrix4(mat);
 
-    // create line material
-    let lineMaterial = new LineMaterial({
-      color: 0xff00ff,
-      linewidth: 0.005,
-    });
+    // create matcap materials
+    let tubeMaterial = createCurveMatCapMaterial(
+      this.ps.matcapTextures.r,
+      this.ps.matcapTextures.g,
+      this.ps.matcapTextures.b,
+      this.ps.matcapTextures.k
+    );
+    tubeMaterial.uniforms.rad.value = 0.05;
+    let sphereMaterial = createInstancedMatCapMaterial(
+      this.ps.matcapTextures.r,
+      this.ps.matcapTextures.g,
+      this.ps.matcapTextures.b,
+      this.ps.matcapTextures.k
+    );
+    sphereMaterial.uniforms.scale.value = 0.05;
 
-    // create mesh
-    let threeMesh = new LineSegments2(threeGeometry, lineMaterial);
-    // let threeMesh = new LineSegments2(threeGeometry);
-    threeMesh.computeLineDistances();
-    threeMesh.scale.set(1, 1, 1);
-    return [threeMesh, threeGeometry];
+    let tubeMesh = new InstancedMesh(
+      tubeGeometry,
+      tubeMaterial,
+      segments.length
+    );
+    let pointMesh = new InstancedMesh(
+      sphereGeometry,
+      sphereMaterial,
+      vertices.length
+    );
+
+    let lengths = new Float32Array(segments.length);
+    mat = new Matrix4();
+    for (let iS = 0; iS < segments.length; iS++) {
+      let start = this.ps.listToVec(vertices[segments[iS][0]]);
+      let end = this.ps.listToVec(vertices[segments[iS][1]]);
+      let offset = new Vector3();
+      offset.subVectors(start, end); // offset = start - end
+
+      lengths[iS] = offset.length();
+      mat.lookAt(new Vector3(0, 0, 0), offset, new Vector3(0, 0, 1));
+      mat.setPosition(start.x, start.y, start.z);
+      tubeMesh.setMatrixAt(iS, mat);
+      pointMesh.setMatrixAt(segments[iS][0], mat);
+      pointMesh.setMatrixAt(segments[iS][1], mat);
+    }
+    tubeMesh.geometry.setAttribute(
+      "len",
+      new InstancedBufferAttribute(lengths, 1)
+    );
+
+    let curve = new Group();
+    curve.add(tubeMesh);
+    curve.add(pointMesh);
+
+    return [curve, tubeMesh, pointMesh];
   }
 }
 
