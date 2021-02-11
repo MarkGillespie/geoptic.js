@@ -28,7 +28,7 @@ function computeMinMax(values) {
 class VertexScalarQuantity {
   constructor(name, values, parentMesh) {
     this.parent = parentMesh;
-    this.ps = this.parent.ps;
+    this.gp = this.parent.gp;
     this.values = values;
     this.name = name;
     this.enabled = false;
@@ -39,10 +39,10 @@ class VertexScalarQuantity {
 
     // create a new mesh material
     let functionMaterial = createVertexScalarFunctionMaterial(
-      this.ps.matcapTextures.r,
-      this.ps.matcapTextures.g,
-      this.ps.matcapTextures.b,
-      this.ps.matcapTextures.k
+      this.gp.matcapTextures.r,
+      this.gp.matcapTextures.g,
+      this.gp.matcapTextures.b,
+      this.gp.matcapTextures.k
     );
 
     // build a three.js mesh to visualize the function
@@ -128,7 +128,7 @@ class VertexScalarQuantity {
   }
 
   getVertexValue(iV) {
-    return this.ps.prettyScalar(this.values[iV]);
+    return this.gp.prettyScalar(this.values[iV]);
   }
   getEdgeValue(iE) {
     return undefined;
@@ -143,7 +143,7 @@ class VertexScalarQuantity {
 class PointCloudScalarQuantity {
   constructor(name, values, parentCloud) {
     this.parent = parentCloud;
-    this.ps = this.parent.ps;
+    this.gp = this.parent.ps;
     this.values = values;
     this.name = name;
     this.enabled = false;
@@ -154,18 +154,18 @@ class PointCloudScalarQuantity {
 
     // create a new mesh material
     let functionMaterial = createInstancedScalarFunctionMaterial(
-      this.ps.matcapTextures.r,
-      this.ps.matcapTextures.g,
-      this.ps.matcapTextures.b,
-      this.ps.matcapTextures.k
+      this.gp.matcapTextures.r,
+      this.gp.matcapTextures.g,
+      this.gp.matcapTextures.b,
+      this.gp.matcapTextures.k
     );
 
     // create matcap material
     let matcapMaterial = createInstancedScalarFunctionMaterial(
-      this.ps.matcapTextures.r,
-      this.ps.matcapTextures.g,
-      this.ps.matcapTextures.b,
-      this.ps.matcapTextures.k
+      this.gp.matcapTextures.r,
+      this.gp.matcapTextures.g,
+      this.gp.matcapTextures.b,
+      this.gp.matcapTextures.k
     );
 
     // create mesh

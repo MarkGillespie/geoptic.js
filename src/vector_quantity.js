@@ -22,7 +22,7 @@ import { getNextUniqueColor } from "./color_utils.js";
 class VertexVectorQuantity {
   constructor(name, values, parentMesh) {
     this.parent = parentMesh;
-    this.ps = this.parent.ps;
+    this.gp = this.parent.gp;
     this.values = values;
     this.name = name;
     this.enabled = false;
@@ -83,10 +83,10 @@ class VertexVectorQuantity {
 
     // create matcap material
     let material = createInstancedMatCapMaterial(
-      this.ps.matcapTextures.r,
-      this.ps.matcapTextures.g,
-      this.ps.matcapTextures.b,
-      this.ps.matcapTextures.k
+      this.gp.matcapTextures.r,
+      this.gp.matcapTextures.g,
+      this.gp.matcapTextures.b,
+      this.gp.matcapTextures.k
     );
     material.uniforms.scale.value = 0.05;
 
@@ -172,7 +172,7 @@ class VertexVectorQuantity {
   getVertexValue(iV) {
     let vec = this.values.get(iV);
     let vecList = [vec.x, vec.y, vec.z];
-    return this.ps.prettyVector(vecList);
+    return this.gp.prettyVector(vecList);
   }
   getEdgeValue(iE) {
     return undefined;

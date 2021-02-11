@@ -16,8 +16,8 @@ import {
 import { getNextUniqueColor } from "./color_utils.js";
 
 class CurveNetwork {
-  constructor(vertices, segments, maxLen, name, polyscopeEnvironment) {
-    this.ps = polyscopeEnvironment;
+  constructor(vertices, segments, maxLen, name, geopticEnvironment) {
+    this.gp = geopticEnvironment;
     this.res = 12;
 
     [
@@ -38,15 +38,15 @@ class CurveNetwork {
   setEnabled(enabled) {
     this.guiFields[this.name + "#Enabled"] = enabled;
     if (enabled) {
-      this.ps.scene.add(this.mesh);
+      this.gp.scene.add(this.mesh);
     } else {
-      this.ps.scene.remove(this.mesh);
+      this.gp.scene.remove(this.mesh);
     }
   }
 
   remove() {
     for (let q in this.quantities) {
-      this.ps.scene.remove(this.quantities[q].mesh);
+      this.gp.scene.remove(this.quantities[q].mesh);
       this.quantities[q].remove();
     }
     this.quantities = {};
@@ -56,8 +56,8 @@ class CurveNetwork {
     const lengths = this.tubeMesh.geometry.attributes.len.array;
     let mat = new Matrix4();
     for (let iS = 0; iS < this.segments.length; iS++) {
-      let start = this.ps.listToVec(newPositions[this.segments[iS][0]]);
-      let end = this.ps.listToVec(newPositions[this.segments[iS][1]]);
+      let start = this.gp.listToVec(newPositions[this.segments[iS][0]]);
+      let end = this.gp.listToVec(newPositions[this.segments[iS][1]]);
       let offset = new Vector3();
       offset.subVectors(start, end); // offset = start - end
 
@@ -147,17 +147,17 @@ class CurveNetwork {
 
     // create matcap materials
     let tubeMaterial = createCurveMatCapMaterial(
-      this.ps.matcapTextures.r,
-      this.ps.matcapTextures.g,
-      this.ps.matcapTextures.b,
-      this.ps.matcapTextures.k
+      this.gp.matcapTextures.r,
+      this.gp.matcapTextures.g,
+      this.gp.matcapTextures.b,
+      this.gp.matcapTextures.k
     );
     tubeMaterial.uniforms.rad.value = 0.05;
     let sphereMaterial = createInstancedMatCapMaterial(
-      this.ps.matcapTextures.r,
-      this.ps.matcapTextures.g,
-      this.ps.matcapTextures.b,
-      this.ps.matcapTextures.k
+      this.gp.matcapTextures.r,
+      this.gp.matcapTextures.g,
+      this.gp.matcapTextures.b,
+      this.gp.matcapTextures.k
     );
     sphereMaterial.uniforms.scale.value = 0.05;
 
@@ -175,8 +175,8 @@ class CurveNetwork {
     let lengths = new Float32Array(segments.length);
     mat = new Matrix4();
     for (let iS = 0; iS < segments.length; iS++) {
-      let start = this.ps.listToVec(vertices[segments[iS][0]]);
-      let end = this.ps.listToVec(vertices[segments[iS][1]]);
+      let start = this.gp.listToVec(vertices[segments[iS][0]]);
+      let end = this.gp.listToVec(vertices[segments[iS][1]]);
       let offset = new Vector3();
       offset.subVectors(start, end); // offset = start - end
 

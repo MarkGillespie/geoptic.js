@@ -18,8 +18,8 @@ import { VertexScalarQuantity } from "./scalar_quantity.js";
 import { VertexVectorQuantity } from "./vector_quantity.js";
 
 class SurfaceMesh {
-  constructor(coords, faces, name, polyscopeEnvironment) {
-    this.ps = polyscopeEnvironment;
+  constructor(coords, faces, name, geopticEnvironment) {
+    this.gp = geopticEnvironment;
     this.nV = coords.size();
     this.coords = coords;
     this.faces = faces;
@@ -148,20 +148,20 @@ class SurfaceMesh {
       let enabledQuantity = false;
       for (let q in this.quantities) {
         if (this.quantities[q].enabled) {
-          this.ps.scene.add(this.quantities[q].mesh);
+          this.gp.scene.add(this.quantities[q].mesh);
           enabledQuantity = true;
         }
       }
       if (!enabledQuantity) {
-        this.ps.scene.add(this.mesh);
+        this.gp.scene.add(this.mesh);
       }
-      this.ps.pickScene.add(this.pickMesh);
+      this.gp.pickScene.add(this.pickMesh);
     } else {
       for (let q in this.quantities) {
-        this.ps.scene.remove(this.quantities[q].mesh);
+        this.gp.scene.remove(this.quantities[q].mesh);
       }
-      this.ps.scene.remove(this.mesh);
-      this.ps.pickScene.remove(this.pickMesh);
+      this.gp.scene.remove(this.mesh);
+      this.gp.pickScene.remove(this.pickMesh);
     }
   }
 
@@ -172,29 +172,29 @@ class SurfaceMesh {
         if (p.isDominantQuantity && pName != q.name) {
           this.guiFields[p.prefix + "#Enabled"] = false;
           p.enabled = false;
-          this.ps.scene.remove(p.mesh);
+          this.gp.scene.remove(p.mesh);
         }
       }
     }
 
     if (this.enabled) {
       if (q.isDominantQuantity) {
-        this.ps.scene.remove(this.mesh);
+        this.gp.scene.remove(this.mesh);
       }
-      this.ps.scene.add(q.mesh);
+      this.gp.scene.add(q.mesh);
     }
   }
 
   disableQuantity(q) {
     if (this.enabled) {
-      this.ps.scene.remove(q.mesh);
-      this.ps.scene.add(this.mesh);
+      this.gp.scene.remove(q.mesh);
+      this.gp.scene.add(this.mesh);
     }
   }
 
   remove() {
     for (let q in this.quantities) {
-      this.ps.scene.remove(this.quantities[q].mesh);
+      this.gp.scene.remove(this.quantities[q].mesh);
       this.quantities[q].remove();
     }
     this.quantities = {};
@@ -343,10 +343,10 @@ class SurfaceMesh {
 
     // create matcap material
     let matcapMaterial = createMatCapMaterial(
-      this.ps.matcapTextures.r,
-      this.ps.matcapTextures.g,
-      this.ps.matcapTextures.b,
-      this.ps.matcapTextures.k
+      this.gp.matcapTextures.r,
+      this.gp.matcapTextures.g,
+      this.gp.matcapTextures.b,
+      this.gp.matcapTextures.k
     );
 
     // create mesh
@@ -356,30 +356,30 @@ class SurfaceMesh {
 
   pickElement(localInd) {
     if (localInd < this.facePickIndStart) {
-      this.ps.setDataHeader(`Surface Mesh ${this.name} Vertex ${localInd}`);
+      this.gp.setDataHeader(`Surface Mesh ${this.name} Vertex ${localInd}`);
 
-      this.ps.clearDataFields();
-      this.ps.showDataField(
+      this.gp.clearDataFields();
+      this.gp.showDataField(
         "position",
-        this.ps.prettyVector(this.coords.get(localInd))
+        this.gp.prettyVector(this.coords.get(localInd))
       );
 
       for (let qName in this.quantities) {
         let qVal = this.quantities[qName].getVertexValue(localInd);
         if (qVal) {
-          this.ps.showDataField(qName, qVal);
+          this.gp.showDataField(qName, qVal);
         }
       }
     } else if (localInd < this.edgePickIndStart) {
-      this.ps.setDataHeader(
+      this.gp.setDataHeader(
         `Surface Mesh ${this.name} Face ${localInd - this.facePickIndStart}`
       );
-      this.ps.clearDataFields();
+      this.gp.clearDataFields();
     } else {
-      this.ps.setDataHeader(
+      this.gp.setDataHeader(
         `Surface Mesh ${this.name} Edge ${localInd - this.edgePickIndStart}`
       );
-      this.ps.clearDataFields();
+      this.gp.clearDataFields();
     }
   }
 
