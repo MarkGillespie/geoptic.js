@@ -24,13 +24,6 @@
             float e = 1.0 - min(min(dist.x, dist.y), dist.z);
             return e;
         }
-
-
-        vec4 gammaCorrect( vec4 colorLinear )
-        {
-        const float screenGamma = 2.2;
-        return vec4(pow(colorLinear.rgb, vec3(1./screenGamma)), colorLinear.a);
-        }
 `;
 
   function createMatCapMaterial(tex_r, tex_g, tex_b, tex_k) {
@@ -45,8 +38,9 @@
             vec3 vNormal = ( mat3( modelViewMatrix ) * normal );
             vNormal = normalize(vNormal);
 
-            Point.x = vNormal.x * 0.5 + 0.5;
-            Point.y = vNormal.y * 0.5 + 0.5;
+            // pull slightly inward, to reduce sampling artifacts near edges
+            Point.x = 0.93 * vNormal.x * 0.5 + 0.5;
+            Point.y = 0.93 * vNormal.y * 0.5 + 0.5;
 
             Barycoord = barycoord;
 
@@ -73,12 +67,12 @@
 
 
             float alpha = getEdgeFactor(Barycoord, vec3(1.,1.,1.), edgeWidth);
-            vec2 coord = Point * 0.95; // pull slightly inward, to reduce sampling artifacts near edges
+            vec2 coord = Point;
 
-            vec4 mat_r = gammaCorrect(texture2D(Matcap_r, coord));
-            vec4 mat_g = gammaCorrect(texture2D(Matcap_g, coord));
-            vec4 mat_b = gammaCorrect(texture2D(Matcap_b, coord));
-            vec4 mat_k = gammaCorrect(texture2D(Matcap_k, coord));
+            vec4 mat_r = sRGBToLinear(texture2D(Matcap_r, coord));
+            vec4 mat_g = sRGBToLinear(texture2D(Matcap_g, coord));
+            vec4 mat_b = sRGBToLinear(texture2D(Matcap_b, coord));
+            vec4 mat_k = sRGBToLinear(texture2D(Matcap_k, coord));
 
             vec4 colorCombined = color.r * mat_r + color.g * mat_g + color.b * mat_b +
                                 (1. - color.r - color.g - color.b) * mat_k;
@@ -87,6 +81,7 @@
                                 (1. - edgeColor.r - edgeColor.g - edgeColor.b) * mat_k;
 
             gl_FragColor = (1.-alpha) * colorCombined + alpha * edgeColorCombined;
+            gl_FragColor = LinearTosRGB( gl_FragColor );
         }
     `;
 
@@ -121,8 +116,9 @@
             vec3 vNormal = ( mat3( modelViewMatrix ) * normal );
             vNormal = normalize(vNormal);
 
-            Point.x = vNormal.x * 0.5 + 0.5;
-            Point.y = vNormal.y * 0.5 + 0.5;
+            // pull slightly inward, to reduce sampling artifacts near edges
+            Point.x = 0.93 * vNormal.x * 0.5 + 0.5;
+            Point.y = 0.93 * vNormal.y * 0.5 + 0.5;
 
             Barycoord = barycoord;
             Color = color;
@@ -150,12 +146,12 @@
 
 
             float alpha = getEdgeFactor(Barycoord, vec3(1.,1.,1.), edgeWidth);
-            vec2 coord = Point * 0.95; // pull slightly inward, to reduce sampling artifacts near edges
+            vec2 coord = Point;
 
-            vec4 mat_r = gammaCorrect(texture2D(Matcap_r, coord));
-            vec4 mat_g = gammaCorrect(texture2D(Matcap_g, coord));
-            vec4 mat_b = gammaCorrect(texture2D(Matcap_b, coord));
-            vec4 mat_k = gammaCorrect(texture2D(Matcap_k, coord));
+            vec4 mat_r = sRGBToLinear(texture2D(Matcap_r, coord));
+            vec4 mat_g = sRGBToLinear(texture2D(Matcap_g, coord));
+            vec4 mat_b = sRGBToLinear(texture2D(Matcap_b, coord));
+            vec4 mat_k = sRGBToLinear(texture2D(Matcap_k, coord));
 
             vec4 colorCombined = Color.r * mat_r + Color.g * mat_g + Color.b * mat_b +
                                 (1. - Color.r - Color.g - Color.b) * mat_k;
@@ -164,6 +160,7 @@
                                 (1. - edgeColor.r - edgeColor.g - edgeColor.b) * mat_k;
 
             gl_FragColor = (1.-alpha) * colorCombined + alpha * edgeColorCombined;
+            gl_FragColor = LinearTosRGB( gl_FragColor );
         }
     `;
 
@@ -330,8 +327,9 @@
             vec3 vNormal = (modelViewMatrix * instanceMatrix * vec4(normal, 0.)).xyz;
             vNormal = normalize(vNormal);
 
-            Point.x = vNormal.x * 0.5 + 0.5;
-            Point.y = vNormal.y * 0.5 + 0.5;
+            // pull slightly inward, to reduce sampling artifacts near edges
+            Point.x = 0.93 * vNormal.x * 0.5 + 0.5;
+            Point.y = 0.93 * vNormal.y * 0.5 + 0.5;
 
             gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4( scale * position, 1.0 );
 
@@ -351,18 +349,18 @@
 
         void main(void){
 
+            vec2 coord = Point;
 
-            vec2 coord = Point * 0.95; // pull slightly inward, to reduce sampling artifacts near edges
-
-            vec4 mat_r = gammaCorrect(texture2D(Matcap_r, coord));
-            vec4 mat_g = gammaCorrect(texture2D(Matcap_g, coord));
-            vec4 mat_b = gammaCorrect(texture2D(Matcap_b, coord));
-            vec4 mat_k = gammaCorrect(texture2D(Matcap_k, coord));
+            vec4 mat_r = sRGBToLinear(texture2D(Matcap_r, coord));
+            vec4 mat_g = sRGBToLinear(texture2D(Matcap_g, coord));
+            vec4 mat_b = sRGBToLinear(texture2D(Matcap_b, coord));
+            vec4 mat_k = sRGBToLinear(texture2D(Matcap_k, coord));
 
             vec4 colorCombined = color.r * mat_r + color.g * mat_g + color.b * mat_b +
                                 (1. - color.r - color.g - color.b) * mat_k;
 
             gl_FragColor = colorCombined;
+            gl_FragColor = LinearTosRGB( gl_FragColor );
         }
     `;
 
@@ -395,8 +393,9 @@
             vec3 vNormal = (modelViewMatrix * instanceMatrix * vec4(normal, 0.)).xyz;
             vNormal = normalize(vNormal);
 
-            Point.x = vNormal.x * 0.5 + 0.5;
-            Point.y = vNormal.y * 0.5 + 0.5;
+            // pull slightly inward, to reduce sampling artifacts near edges
+            Point.x = 0.93 * vNormal.x * 0.5 + 0.5;
+            Point.y = 0.93 * vNormal.y * 0.5 + 0.5;
 
             Color = color;
 
@@ -418,18 +417,18 @@
 
         void main(void){
 
+            vec2 coord = Point;
 
-            vec2 coord = Point * 0.95; // pull slightly inward, to reduce sampling artifacts near edges
-
-            vec4 mat_r = gammaCorrect(texture2D(Matcap_r, coord));
-            vec4 mat_g = gammaCorrect(texture2D(Matcap_g, coord));
-            vec4 mat_b = gammaCorrect(texture2D(Matcap_b, coord));
-            vec4 mat_k = gammaCorrect(texture2D(Matcap_k, coord));
+            vec4 mat_r = sRGBToLinear(texture2D(Matcap_r, coord));
+            vec4 mat_g = sRGBToLinear(texture2D(Matcap_g, coord));
+            vec4 mat_b = sRGBToLinear(texture2D(Matcap_b, coord));
+            vec4 mat_k = sRGBToLinear(texture2D(Matcap_k, coord));
 
             vec4 colorCombined = Color.r * mat_r + Color.g * mat_g + Color.b * mat_b +
                                 (1. - Color.r - Color.g - Color.b) * mat_k;
 
             gl_FragColor = colorCombined;
+            gl_FragColor = LinearTosRGB( gl_FragColor );
         }
     `;
 
@@ -2060,52 +2059,6 @@
       this.matcapTextures.k = new THREE.TextureLoader().load(
         this.geopticPath + "/img/clay_k.png"
       );
-
-      // new RGBELoader().setDataType(THREE.FloatType).load(
-      //   "img/clay_r.hdr",
-      //   function (texture, textureData) {
-      //     this.matcapTextures.r = texture;
-      //     console.log(texture);
-      //     console.log(textureData);
-      //   }.bind(this)
-      // );
-      // new RGBELoader().setDataType(THREE.FloatType).load(
-      //   "img/clay_g.hdr",
-      //   function (texture, textureData) {
-      //     this.matcapTextures.g = texture;
-      //   }.bind(this)
-      // );
-      // new RGBELoader().setDataType(THREE.UnsignedByteType).load(
-      //   "img/clay_b.hdr",
-      //   function (texture, textureData) {
-      //     this.matcapTextures.b = texture;
-
-      //     const material = new THREE.MeshBasicMaterial({ map: texture });
-      //     const quad = new THREE.PlaneGeometry(
-      //       (1.5 * textureData.width) / textureData.height,
-      //       1.5
-      //     );
-      //     const mesh = new THREE.Mesh(quad, material);
-      //     mesh.translateX(2);
-      //     this.scene.add(mesh);
-      //   }.bind(this)
-      // );
-      // new RGBELoader().setDataType(THREE.FloatType).load(
-      //   "img/clay_k.hdr",
-      //   function (texture, textureData) {
-      //     this.matcapTextures.k = texture;
-      //     console.log(texture);
-      //     console.log(textureData);
-
-      //     const material = new THREE.MeshBasicMaterial({ map: texture });
-      //     const quad = new THREE.PlaneGeometry(
-      //       (1.5 * textureData.width) / textureData.height,
-      //       1.5
-      //     );
-      //     const mesh = new THREE.Mesh(quad, material);
-      //     this.scene.add(mesh);
-      //   }.bind(this)
-      // );
     }
 
     initRenderer(container) {
