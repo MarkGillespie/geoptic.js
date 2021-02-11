@@ -5,6 +5,8 @@ import { Reflector } from "https://unpkg.com/three@0.125.1/examples/jsm/objects/
 import { RGBELoader } from "https://unpkg.com/three@0.125.1/examples/jsm/loaders/RGBELoader.js";
 import Stats from "https://unpkg.com/three@0.125.1/examples/jsm/libs/stats.module.js";
 
+import { GUI } from "https://unpkg.com/dat.gui@0.7.6/build/dat.gui.module.js";
+
 import {
   groundPlaneVertexShader,
   groundPlaneFragmentShader,
@@ -16,7 +18,7 @@ import { CurveNetwork } from "./curve_network.js";
 import { getNextUniqueColor } from "./color_utils.js";
 
 // https://stackoverflow.com/a/34452130
-dat.GUI.prototype.removeFolder = function (name) {
+GUI.prototype.removeFolder = function (name) {
   var folder = this.__folders[name];
   if (!folder) {
     return;
@@ -58,7 +60,7 @@ class Geoptic {
     this.structureGuiCurveNetworks = undefined;
     this.structureGuiPointClouds = undefined;
 
-    this.commandGui = new dat.GUI({ resizeable: true });
+    this.commandGui = new GUI({ resizeable: true });
     this.commandGuiFields = {};
 
     this.groundPlane = undefined;
@@ -201,7 +203,7 @@ class Geoptic {
   }
 
   initGUI() {
-    this.structureGui = new dat.GUI({ autoPlace: false });
+    this.structureGui = new GUI({ autoPlace: false });
 
     let structureGuiWrapper = document.createElement("div");
     document.body.appendChild(structureGuiWrapper);

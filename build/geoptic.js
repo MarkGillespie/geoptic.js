@@ -1,8 +1,8 @@
 (function (global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('https://unpkg.com/three@0.125.1/build/three.module.js'), require('https://unpkg.com/three@0.125.1/examples/jsm/controls/TrackballControls.js'), require('https://unpkg.com/three@0.125.1/examples/jsm/WebGL.js'), require('https://unpkg.com/three@0.125.1/examples/jsm/objects/Reflector.js'), require('https://unpkg.com/three@0.125.1/examples/jsm/loaders/RGBELoader.js'), require('https://unpkg.com/three@0.125.1/examples/jsm/libs/stats.module.js')) :
-  typeof define === 'function' && define.amd ? define(['exports', 'https://unpkg.com/three@0.125.1/build/three.module.js', 'https://unpkg.com/three@0.125.1/examples/jsm/controls/TrackballControls.js', 'https://unpkg.com/three@0.125.1/examples/jsm/WebGL.js', 'https://unpkg.com/three@0.125.1/examples/jsm/objects/Reflector.js', 'https://unpkg.com/three@0.125.1/examples/jsm/loaders/RGBELoader.js', 'https://unpkg.com/three@0.125.1/examples/jsm/libs/stats.module.js'], factory) :
-  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global.geoptic = {}, global.THREE, global.TrackballControls_js, global.WebGL_js, global.Reflector_js, null, global.Stats));
-}(this, (function (exports, THREE, TrackballControls_js, WebGL_js, Reflector_js, RGBELoader_js, Stats) { 'use strict';
+  typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('https://unpkg.com/three@0.125.1/build/three.module.js'), require('https://unpkg.com/three@0.125.1/examples/jsm/controls/TrackballControls.js'), require('https://unpkg.com/three@0.125.1/examples/jsm/WebGL.js'), require('https://unpkg.com/three@0.125.1/examples/jsm/objects/Reflector.js'), require('https://unpkg.com/three@0.125.1/examples/jsm/loaders/RGBELoader.js'), require('https://unpkg.com/three@0.125.1/examples/jsm/libs/stats.module.js'), require('https://unpkg.com/dat.gui@0.7.6/build/dat.gui.module.js')) :
+  typeof define === 'function' && define.amd ? define(['exports', 'https://unpkg.com/three@0.125.1/build/three.module.js', 'https://unpkg.com/three@0.125.1/examples/jsm/controls/TrackballControls.js', 'https://unpkg.com/three@0.125.1/examples/jsm/WebGL.js', 'https://unpkg.com/three@0.125.1/examples/jsm/objects/Reflector.js', 'https://unpkg.com/three@0.125.1/examples/jsm/loaders/RGBELoader.js', 'https://unpkg.com/three@0.125.1/examples/jsm/libs/stats.module.js', 'https://unpkg.com/dat.gui@0.7.6/build/dat.gui.module.js'], factory) :
+  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global.geoptic = {}, global.THREE, global.TrackballControls_js, global.WebGL_js, global.Reflector_js, null, global.Stats, global.dat_gui_module_js));
+}(this, (function (exports, THREE, TrackballControls_js, WebGL_js, Reflector_js, RGBELoader_js, Stats, dat_gui_module_js) { 'use strict';
 
   function _interopDefaultLegacy (e) { return e && typeof e === 'object' && 'default' in e ? e : { 'default': e }; }
 
@@ -2021,7 +2021,7 @@
   }
 
   // https://stackoverflow.com/a/34452130
-  dat.GUI.prototype.removeFolder = function (name) {
+  dat_gui_module_js.GUI.prototype.removeFolder = function (name) {
     var folder = this.__folders[name];
     if (!folder) {
       return;
@@ -2063,7 +2063,7 @@
       this.structureGuiCurveNetworks = undefined;
       this.structureGuiPointClouds = undefined;
 
-      this.commandGui = new dat.GUI({ resizeable: true });
+      this.commandGui = new dat_gui_module_js.GUI({ resizeable: true });
       this.commandGuiFields = {};
 
       this.groundPlane = undefined;
@@ -2205,7 +2205,7 @@
     }
 
     initGUI() {
-      this.structureGui = new dat.GUI({ autoPlace: false });
+      this.structureGui = new dat_gui_module_js.GUI({ autoPlace: false });
 
       let structureGuiWrapper = document.createElement("div");
       document.body.appendChild(structureGuiWrapper);
