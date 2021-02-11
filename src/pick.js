@@ -47,9 +47,17 @@ function localIndexToGlobal(structure, localInd) {
   return 0;
 }
 
-function evaluatePickQuery(pickRenderer, pickScene, camera, xPos, yPos) {
+function evaluatePickQuery(
+  pickRenderer,
+  pickScene,
+  camera,
+  xPos,
+  yPos,
+  width,
+  height
+) {
   // draw
-  let pickTarget = new WebGLRenderTarget(window.innerWidth, window.innerHeight);
+  let pickTarget = new WebGLRenderTarget(width, height);
   pickTarget.texture.generateMipmaps = false;
   pickRenderer.setRenderTarget(pickTarget);
   pickRenderer.render(pickScene, camera);

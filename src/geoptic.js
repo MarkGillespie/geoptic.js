@@ -30,10 +30,11 @@ GUI.prototype.removeFolder = function (name) {
 };
 
 class Geoptic {
-  constructor(path = "js/geoptic.js") {
+  constructor(options = {}) {
     if (!WEBGL.isWebGLAvailable()) alert(WEBGL.getWebGLErrorMessage());
 
-    this.geopticPath = path;
+    this.geopticPath = options.path || "js/geoptic.js";
+    this.parent = options.parent || document.body;
 
     this.input = undefined;
 
@@ -62,6 +63,10 @@ class Geoptic {
 
     this.commandGui = new GUI({ resizeable: true });
     this.commandGuiFields = {};
+    let commandGuiWrapper = document.createElement("div");
+    this.parent.appendChild(commandGuiWrapper);
+    commandGuiWrapper.id = "command-gui";
+    commandGuiWrapper.appendChild(this.commandGui.domElement);
 
     this.groundPlane = undefined;
 
@@ -116,11 +121,11 @@ class Geoptic {
       }.bind(this)
     );
 
-    this.container = document.createElement("div");
-    this.container.classList.add("container");
-    document.body.appendChild(this.container);
+    this.initDOM();
 
     this.stats = new Stats();
+    // Place stats in corner of this.container, rather than always placing at the top-left corner of the page
+    this.stats.dom.style.position = "absolute";
     this.container.append(this.stats.dom);
 
     this.initRenderer(this.container);
@@ -134,14 +139,51 @@ class Geoptic {
     this.addEventListeners();
   }
 
+  initDOM() {
+    this.container = document.createElement("div");
+    this.container.style.height = "100%";
+    this.container.style.overflow = "hidden";
+    this.container.style.position = "relative";
+    this.parent.appendChild(this.container);
+
+    // <div id="selection-info">
+    //     <div id="info-head"></div>
+    //     <div id="info-body">
+    //         <div id="info-body-field-names"></div>
+    //         <div id="info-body-field-values"></div>
+    //     </div>
+    // </div>
+    let selectionInfo = document.createElement("div");
+    selectionInfo.id = "selection-info";
+    let infoHeader = document.createElement("div");
+    infoHeader.id = "info-head";
+    let infoBody = document.createElement("div");
+    infoBody.id = "info-body";
+    let infoBodyName = document.createElement("div");
+    infoBodyName.id = "info-body-field-names";
+    let infoBodyValues = document.createElement("div");
+    infoBodyValues.id = "info-body-field-values";
+
+    infoBody.appendChild(infoBodyName);
+    infoBody.appendChild(infoBodyValues);
+    selectionInfo.appendChild(infoHeader);
+    selectionInfo.appendChild(infoBody);
+    this.container.appendChild(selectionInfo);
+
+    // <div id="messages"><div></div></div>
+    let messagePanel = document.createElement("div");
+    messagePanel.id = "messages";
+    this.container.appendChild(messagePanel);
+  }
+
   initGroundPlane() {
     let tex = new THREE.TextureLoader().load(
       this.geopticPath + "/img/concrete.png"
     );
     this.groundPlane = new Reflector(new THREE.PlaneGeometry(100, 100), {
       clipBias: 0.003,
-      textureWidth: window.innerWidth * window.devicePixelRatio,
-      textureHeight: window.innerHeight * window.devicePixelRatio,
+      textureWidth: this.parent.offsetWidth * window.devicePixelRatio,
+      textureHeight: this.parent.offsetHeight * window.devicePixelRatio,
       color: 0x777777,
     });
     this.groundPlane.material.vertexShader = groundPlaneVertexShader;
@@ -189,7 +231,7 @@ class Geoptic {
     });
     this.renderer.setPixelRatio(window.devicePixelRatio);
     this.renderer.setClearColor(0xffffff, 1.0);
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.renderer.setSize(this.parent.offsetWidth, this.parent.offsetHeight);
     this.container.appendChild(this.renderer.domElement);
 
     this.pickRenderer = new THREE.WebGLRenderer({
@@ -197,16 +239,19 @@ class Geoptic {
     });
     this.pickRenderer.setPixelRatio(window.devicePixelRatio);
     this.pickRenderer.setClearColor(0xffffff, 1.0);
-    this.pickRenderer.setSize(window.innerWidth, window.innerHeight);
+    this.pickRenderer.setSize(
+      this.parent.offsetWidth,
+      this.parent.offsetHeight
+    );
     // TODO: do I need to do this?
     container.appendChild(this.pickRenderer.domElement);
   }
 
   initGUI() {
-    this.structureGui = new GUI({ autoPlace: false });
+    this.structureGui = new GUI({ autoPlace: false, resizeable: true });
 
     let structureGuiWrapper = document.createElement("div");
-    document.body.appendChild(structureGuiWrapper);
+    this.parent.appendChild(structureGuiWrapper);
     structureGuiWrapper.id = "structure-gui";
     structureGuiWrapper.appendChild(this.structureGui.domElement);
 
@@ -228,7 +273,7 @@ class Geoptic {
 
   initCamera() {
     const fov = 45.0;
-    const aspect = window.innerWidth / window.innerHeight;
+    const aspect = this.parent.offsetWidth / this.parent.offsetHeight;
     const near = 0.01;
     const far = 1000;
     const eyeZ = 3.5;
@@ -412,12 +457,16 @@ class Geoptic {
   }
 
   pick(clickX, clickY) {
-    let pickResult = evaluatePickQuery(
+    const rect = this.parent.getBoundingClientRect();
+
+    const pickResult = evaluatePickQuery(
       this.pickRenderer,
       this.pickScene,
       this.camera,
-      clickX,
-      clickY
+      clickX - rect.left,
+      clickY - rect.top,
+      rect.width,
+      rect.height
     );
     if (pickResult.structure) {
       pickResult.structure.pickElement(pickResult.localInd);
@@ -437,10 +486,10 @@ class Geoptic {
   }
 
   onWindowResize() {
-    this.camera.aspect = window.innerWidth / window.innerHeight;
+    this.camera.aspect = this.parent.offsetWidth / this.parent.offsetHeight;
     this.camera.updateProjectionMatrix();
 
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.renderer.setSize(this.parent.offsetWidth, this.parent.offsetHeight);
     this.controls.handleResize();
     this.render();
   }
@@ -448,9 +497,9 @@ class Geoptic {
   onMouseClick(event) {
     if (
       event.clientX >= 0 &&
-      event.clientX <= window.innerWidth &&
+      event.clientX <= this.parent.offsetWidth &&
       event.clientY >= 0 &&
-      event.clientY <= window.innerHeight
+      event.clientY <= this.parent.offsetHeight
     ) {
       this.pick(event.clientX, event.clientY);
     }
@@ -470,10 +519,10 @@ class Geoptic {
 
   render() {
     // set viewport and render mesh
-    let width = window.innerWidth;
+    let width = this.parent.offsetWidth;
 
-    this.renderer.setViewport(0.0, 0.0, width, window.innerHeight);
-    this.renderer.setScissor(0.0, 0.0, width, window.innerHeight);
+    this.renderer.setViewport(0.0, 0.0, width, this.parent.offsetHeight);
+    this.renderer.setScissor(0.0, 0.0, width, this.parent.offsetHeight);
     this.renderer.setScissorTest(true);
     this.renderer.render(this.scene, this.camera);
   }
