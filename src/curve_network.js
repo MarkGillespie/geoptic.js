@@ -69,6 +69,8 @@ class CurveNetwork {
       this.pointMesh.setMatrixAt(this.segments[iS][1], mat);
     }
     this.tubeMesh.geometry.attributes.len.needsUpdate = true;
+    this.tubeMesh.instanceMatrix.needsUpdate = true;
+    this.pointMesh.instanceMatrix.needsUpdate = true;
   }
 
   setColor(color) {
@@ -195,6 +197,7 @@ class CurveNetwork {
     let curve = new Group();
     curve.add(tubeMesh);
     curve.add(pointMesh);
+    console.log(tubeMesh);
 
     return [curve, tubeMesh, pointMesh];
   }
