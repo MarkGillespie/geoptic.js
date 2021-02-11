@@ -2017,7 +2017,6 @@
       let curve = new THREE.Group();
       curve.add(tubeMesh);
       curve.add(pointMesh);
-      console.log(tubeMesh);
 
       return [curve, tubeMesh, pointMesh];
     }

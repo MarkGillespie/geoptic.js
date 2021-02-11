@@ -2014,7 +2014,6 @@ class CurveNetwork {
     let curve = new Group();
     curve.add(tubeMesh);
     curve.add(pointMesh);
-    console.log(tubeMesh);
 
     return [curve, tubeMesh, pointMesh];
   }
