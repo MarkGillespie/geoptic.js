@@ -142,6 +142,10 @@ class VertexParameterizationQuantity {
     this.setColor1(this.guiFields[this.name + "#Color1"]);
     this.setColor2(this.guiFields[this.name + "#Color2"]);
     this.setScale(this.guiFields[this.name + "#Scale"]);
+
+    // Copy some attributes from parent
+    this.mesh.material.uniforms.edgeWidth = this.parent.mesh.material.uniforms.edgeWidth;
+    this.mesh.material.uniforms.edgeColor = this.parent.mesh.material.uniforms.edgeColor;
   }
 
   initParam(coords) {
