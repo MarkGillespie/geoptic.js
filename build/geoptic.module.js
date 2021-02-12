@@ -1847,7 +1847,7 @@ class PointCloud {
   }
 
   pickElement(localInd) {
-    this.gp.setDataHeader(`Point Cloud ${this.name} Vertex ${localInd}`);
+    this.gp.setDataHeader(`Point Cloud ${this.name}`, `Vertex ${localInd}`);
 
     this.gp.clearDataFields();
     this.gp.showDataField(
