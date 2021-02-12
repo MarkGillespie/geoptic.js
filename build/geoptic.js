@@ -98,6 +98,7 @@
       vertexShader,
       fragmentShader,
     });
+    Material.side = THREE.DoubleSide;
 
     return Material;
   }
@@ -176,6 +177,7 @@
       vertexShader,
       fragmentShader,
     });
+    Material.side = THREE.DoubleSide;
 
     return Material;
   }
@@ -314,6 +316,7 @@
       fragmentShader,
     });
 
+    Material.side = THREE.DoubleSide;
     return Material;
   }
 
@@ -377,6 +380,7 @@
       fragmentShader,
     });
 
+    Material.side = THREE.DoubleSide;
     return Material;
   }
 
@@ -444,6 +448,7 @@
       fragmentShader,
     });
 
+    Material.side = THREE.DoubleSide;
     return Material;
   }
 
@@ -479,6 +484,7 @@
       fragmentShader,
     });
 
+    // Material.side = DoubleSide;
     return Material;
   }
 
@@ -545,6 +551,7 @@
       fragmentShader,
     });
 
+    Material.side = THREE.DoubleSide;
     return Material;
   }
 
@@ -1594,7 +1601,7 @@
         }
       }
 
-      let E = (3 * F) / 2; // In a triangle mesh, 2x the number of edges must equal 3x the number of faces
+      let E = this.edges.length;
       let totalPickElements = V + E + F;
 
       // In "local" indices, indexing elements only within this triMesh, used for reading later

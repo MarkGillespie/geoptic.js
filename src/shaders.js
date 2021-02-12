@@ -480,7 +480,7 @@ function createPointCloudPickMaterial() {
     fragmentShader,
   });
 
-  Material.side = DoubleSide;
+  // Material.side = DoubleSide;
   return Material;
 }
 

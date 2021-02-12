@@ -1,4 +1,4 @@
-import { ShaderMaterial, Vector3, WebGLRenderTarget, Color, Mesh, BufferAttribute, InstancedMesh, InstancedBufferAttribute, CylinderGeometry, Matrix4, Group, Euler, BufferGeometry, IcosahedronGeometry, SphereGeometry, TextureLoader, PlaneGeometry, WebGLRenderer, PerspectiveCamera, Scene, AmbientLight, PointLight, Box3 } from 'https://unpkg.com/three@0.125.1/build/three.module.js';
+import { ShaderMaterial, Vector3, DoubleSide, WebGLRenderTarget, Color, Mesh, BufferAttribute, InstancedMesh, InstancedBufferAttribute, CylinderGeometry, Matrix4, Group, Euler, BufferGeometry, IcosahedronGeometry, SphereGeometry, TextureLoader, PlaneGeometry, WebGLRenderer, PerspectiveCamera, Scene, AmbientLight, PointLight, Box3 } from 'https://unpkg.com/three@0.125.1/build/three.module.js';
 import { TrackballControls } from 'https://unpkg.com/three@0.125.1/examples/jsm/controls/TrackballControls.js';
 import { WEBGL } from 'https://unpkg.com/three@0.125.1/examples/jsm/WebGL.js';
 import { Reflector } from 'https://unpkg.com/three@0.125.1/examples/jsm/objects/Reflector.js';
@@ -96,6 +96,7 @@ function createMatCapMaterial(tex_r, tex_g, tex_b, tex_k) {
     vertexShader,
     fragmentShader,
   });
+  Material.side = DoubleSide;
 
   return Material;
 }
@@ -174,6 +175,7 @@ function createVertexScalarFunctionMaterial(tex_r, tex_g, tex_b, tex_k) {
     vertexShader,
     fragmentShader,
   });
+  Material.side = DoubleSide;
 
   return Material;
 }
@@ -312,6 +314,7 @@ function createSurfaceMeshPickMaterial() {
     fragmentShader,
   });
 
+  Material.side = DoubleSide;
   return Material;
 }
 
@@ -375,6 +378,7 @@ function createInstancedMatCapMaterial(tex_r, tex_g, tex_b, tex_k) {
     fragmentShader,
   });
 
+  Material.side = DoubleSide;
   return Material;
 }
 
@@ -442,6 +446,7 @@ function createInstancedScalarFunctionMaterial(tex_r, tex_g, tex_b, tex_k) {
     fragmentShader,
   });
 
+  Material.side = DoubleSide;
   return Material;
 }
 
@@ -477,6 +482,7 @@ function createPointCloudPickMaterial() {
     fragmentShader,
   });
 
+  // Material.side = DoubleSide;
   return Material;
 }
 
@@ -543,6 +549,7 @@ function createCurveMatCapMaterial(tex_r, tex_g, tex_b, tex_k) {
     fragmentShader,
   });
 
+  Material.side = DoubleSide;
   return Material;
 }
 
@@ -1592,7 +1599,7 @@ class SurfaceMesh {
       }
     }
 
-    let E = (3 * F) / 2; // In a triangle mesh, 2x the number of edges must equal 3x the number of faces
+    let E = this.edges.length;
     let totalPickElements = V + E + F;
 
     // In "local" indices, indexing elements only within this triMesh, used for reading later
