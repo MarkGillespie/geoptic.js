@@ -46,6 +46,14 @@ class PointCloud {
     this.guiFields = guiFields;
     this.guiFolder = guiFolder;
 
+    let objectGuiList = guiFolder.domElement.firstChild;
+    let meshInfoBox = document.createElement("li");
+    meshInfoBox.classList.add("dat-info-box");
+    objectGuiList.appendChild(meshInfoBox);
+    let vertexInfo = document.createElement("span");
+    vertexInfo.innerHTML = "#verts: " + this.nV;
+    meshInfoBox.appendChild(vertexInfo);
+
     guiFields[this.name + "#Enabled"] = true;
     guiFolder
       .add(guiFields, this.name + "#Enabled")

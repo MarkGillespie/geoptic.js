@@ -26,6 +26,7 @@ class CurveNetwork {
       this.pointMesh,
     ] = this.constructThreeCurveNetwork(vertices, segments, maxLen);
 
+    this.nV = vertices.length;
     this.segments = segments;
     this.maxLen = maxLen;
     this.name = name;
@@ -87,6 +88,17 @@ class CurveNetwork {
   initGui(guiFields, guiFolder) {
     this.guiFields = guiFields;
     this.guiFolder = guiFolder;
+
+    let objectGuiList = guiFolder.domElement.firstChild;
+    let meshInfoBox = document.createElement("li");
+    meshInfoBox.classList.add("dat-info-box");
+    objectGuiList.appendChild(meshInfoBox);
+    let vertexInfo = document.createElement("span");
+    vertexInfo.innerHTML = "#verts: " + this.nV;
+    let faceInfo = document.createElement("span");
+    faceInfo.innerHTML = "   #edges: " + this.segments.length;
+    meshInfoBox.appendChild(vertexInfo);
+    meshInfoBox.appendChild(faceInfo);
 
     guiFields[this.name + "#Enabled"] = true;
     guiFolder

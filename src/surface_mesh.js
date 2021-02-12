@@ -66,55 +66,109 @@ class SurfaceMesh {
     this.guiFields = guiFields;
     this.guiFolder = guiFolder;
 
+    let objectGuiList = guiFolder.domElement.firstChild;
+    let meshInfoBox = document.createElement("li");
+    meshInfoBox.classList.add("dat-info-box");
+    objectGuiList.appendChild(meshInfoBox);
+    let vertexInfo = document.createElement("span");
+    vertexInfo.innerHTML = "#verts: " + this.nV;
+    let faceInfo = document.createElement("span");
+    faceInfo.innerHTML = "   #faces: " + this.faces.size();
+    meshInfoBox.appendChild(vertexInfo);
+    meshInfoBox.appendChild(faceInfo);
+
     guiFields[this.name + "#Enabled"] = true;
-    guiFolder
+    const enabledButton = guiFolder
       .add(guiFields, this.name + "#Enabled")
       .onChange((e) => {
         this.setEnabled(e);
       })
       .listen()
       .name("Enabled");
+    let row = enabledButton.domElement.closest("li");
+    row.classList.add("half-button");
+    row.style.width = "35%";
 
     guiFields[this.name + "#Smooth"] = true;
-    guiFolder
+    const smoothButton = guiFolder
       .add(guiFields, this.name + "#Smooth")
       .onChange((c) => {
         this.setSmoothShading(c);
       })
       .listen()
       .name("Smooth");
+    row = smoothButton.domElement.closest("li");
+    row.classList.add("half-button");
+    row.style.width = "35%";
+
+    guiFields[this.name + "#Edges"] = false;
+    const edgesButton = guiFolder
+      .add(guiFields, this.name + "#Edges")
+      .onChange((c) => {
+        this.setEdgesEnabled(c);
+      })
+      .listen()
+      .name("Edges");
+    row = edgesButton.domElement.closest("li");
+    row.classList.add("half-button");
+    row.style.width = "30%";
 
     guiFields[this.name + "#Color"] = getNextUniqueColor();
     this.setColor(guiFields[this.name + "#Color"]);
-    guiFolder
+    const colorButton = guiFolder
       .addColor(guiFields, this.name + "#Color")
       .onChange((c) => {
         this.setColor(c);
       })
       .listen()
       .name("Color");
+
     guiFields[this.name + "#Edge Width"] = 0;
-    guiFolder
+    // keep your own store of the edge width so it doesn't get forgotten
+    // if you set the edge width to zero to turn off edges
+    this.edgeWidth = 1;
+    const edgeWidthInput = guiFolder
       .add(guiFields, this.name + "#Edge Width")
       .min(0)
       .max(2)
       .step(0.05)
       .onChange((width) => {
+        this.edgeWidth = width;
         this.mesh.material.uniforms.edgeWidth.value = width;
       })
       .listen()
       .name("Edge Width");
+    row = edgeWidthInput.domElement.closest("li");
+    row.style.display = "none";
+    this.edgeGuis = [row];
 
     guiFields[this.name + "#Edge Color"] = [0, 0, 0];
-    guiFolder
+    const edgeColorInput = guiFolder
       .addColor(guiFields, this.name + "#Edge Color")
       .onChange((c) => {
         this.setEdgeColor(c);
       })
       .listen()
       .name("Edge Color");
+    row = edgeColorInput.domElement.closest("li");
+    row.style.display = "none";
+    this.edgeGuis.push(row);
 
     guiFolder.open();
+  }
+
+  setEdgesEnabled(enabled) {
+    this.guiFields[this.name + "#Edges"] = enabled;
+    for (let elem of this.edgeGuis) {
+      elem.style.display = enabled ? "block" : "none";
+    }
+    if (enabled) {
+      this.mesh.material.uniforms.edgeWidth.value = this.edgeWidth;
+      this.guiFields[this.name + "#Edge Width"] = this.edgeWidth;
+    } else {
+      this.mesh.material.uniforms.edgeWidth.value = 0;
+      this.guiFields[this.name + "#Edge Width"] = 0;
+    }
   }
 
   setSmoothShading(shadeSmooth) {

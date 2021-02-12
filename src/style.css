@@ -1,3 +1,48 @@
+/* Allow dat.GUI function labels to be full-width */
+.function div span {
+    width: 100% !important;
+}
+
+.dat-info-box {
+    line-height: 20px !important;
+    height: 20px !important;
+    display: grid;
+    justify-content: left;
+    grid-gap: 1em;
+    grid-auto-flow: column; /* somehow puts items in a row */
+}
+
+.half-button {
+    display: inline-block;
+    margin-bottom: -4px;
+    box-sizing: border-box;
+}
+
+/* when closed, half-buttons should go back to block display */
+.closed .half-button{
+    display: block !important;
+}
+
+.half-button div {
+    display: grid;
+    grid-template-columns: auto 27px;
+}
+
+.half-button div span {
+    grid-column: 1 / span 1;
+    width: 100% !important;
+}
+
+.half-button div div {
+    grid-column: 2 / span 1;
+}
+
+.c input[type=checkbox] {
+    width: 19px;
+    height: 19px;
+    margin-top: 4px !important;
+    margin-right: 2px !important;
+}
 
 #structure-gui {
     position: absolute;
