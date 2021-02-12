@@ -13,7 +13,8 @@ import {
   createVertexScalarFunctionMaterial,
   createInstancedScalarFunctionMaterial,
 } from "./shaders.js";
-import { applyColorMap } from "./color_maps.js";
+
+import { availableColorMaps, applyColorMap } from "./color_maps.js";
 
 function computeMinMax(values) {
   let min = values[0];
@@ -72,13 +73,18 @@ class VertexScalarQuantity {
     guiFields[this.prefix + "#ColorMap"] = "viridis";
     this.applyColorMap(guiFields[this.prefix + "#ColorMap"]);
     guiFolder
-      .add(guiFields, this.prefix + "#ColorMap", [
-        "viridis",
-        "coolwarm",
-        "plasma",
-        "magma",
-        "inferno",
-      ])
+      .add(
+        guiFields,
+        this.prefix + "#ColorMap",
+        availableColorMaps
+        //        [
+        // "viridis",
+        // "coolwarm",
+        // "plasma",
+        // "magma",
+        // "inferno",
+        //        ]
+      )
       .onChange((cm) => {
         this.applyColorMap(cm);
       })
