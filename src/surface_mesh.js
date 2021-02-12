@@ -410,7 +410,7 @@ class SurfaceMesh {
 
   pickElement(localInd) {
     if (localInd < this.facePickIndStart) {
-      this.gp.setDataHeader(`Surface Mesh ${this.name} Vertex ${localInd}`);
+      this.gp.setDataHeader(`Surface Mesh ${this.name}`, `Vertex ${localInd}`);
 
       this.gp.clearDataFields();
       this.gp.showDataField(
@@ -426,12 +426,14 @@ class SurfaceMesh {
       }
     } else if (localInd < this.edgePickIndStart) {
       this.gp.setDataHeader(
-        `Surface Mesh ${this.name} Face ${localInd - this.facePickIndStart}`
+        `Surface Mesh ${this.name}`,
+        `Face ${localInd - this.facePickIndStart}`
       );
       this.gp.clearDataFields();
     } else {
       this.gp.setDataHeader(
-        `Surface Mesh ${this.name} Edge ${localInd - this.edgePickIndStart}`
+        `Surface Mesh ${this.name}`,
+        `Edge ${localInd - this.edgePickIndStart}`
       );
       this.gp.clearDataFields();
     }

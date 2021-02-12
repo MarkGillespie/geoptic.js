@@ -69,14 +69,23 @@
 }
 
 #info-head {
-    padding: 0.5em 1em 0.5em 1em;
+    padding: 0;
+}
+
+#info-head-structure {
+    padding: 0.5em 1em 0.25em 1em;
     background-color: #ffffffbb;
 }
+
+#info-head-name {
+    padding: 0.25em 1em 0.5em 1em;
+    background-color: #ffffff77;
+}
+
 #info-body {
     display: grid;
     grid-template-columns: 30% auto;
     grid-template-rows: 100%;
-    overflow-x: scroll;
     grid-gap: 1em;
     padding-left: 1em;
     padding-right: 1em;
@@ -88,6 +97,11 @@
 
 #info-body-field-names {
     text-align: right;
+    overflow-x: scroll;
+}
+
+#info-body-field-values {
+    overflow-x: scroll;
 }
 
 

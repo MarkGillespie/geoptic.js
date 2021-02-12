@@ -147,7 +147,10 @@ class Geoptic {
     this.parent.appendChild(this.container);
 
     // <div id="selection-info">
-    //     <div id="info-head"></div>
+    //     <div id="info-head">
+    //         <div id="info-head-structure"></div>
+    //         <div id="info-head-name"></div>
+    //     </div>
     //     <div id="info-body">
     //         <div id="info-body-field-names"></div>
     //         <div id="info-body-field-values"></div>
@@ -157,6 +160,10 @@ class Geoptic {
     selectionInfo.id = "selection-info";
     let infoHeader = document.createElement("div");
     infoHeader.id = "info-head";
+    let infoHeadStructure = document.createElement("div");
+    infoHeadStructure.id = "info-head-structure";
+    let infoHeadName = document.createElement("div");
+    infoHeadName.id = "info-head-name";
     let infoBody = document.createElement("div");
     infoBody.id = "info-body";
     let infoBodyName = document.createElement("div");
@@ -166,6 +173,8 @@ class Geoptic {
 
     infoBody.appendChild(infoBodyName);
     infoBody.appendChild(infoBodyValues);
+    infoHeader.appendChild(infoHeadStructure);
+    infoHeader.appendChild(infoHeadName);
     selectionInfo.appendChild(infoHeader);
     selectionInfo.appendChild(infoBody);
     this.container.appendChild(selectionInfo);
@@ -452,8 +461,9 @@ class Geoptic {
     document.getElementById("info-body-field-values").appendChild(infoValue);
   }
 
-  setDataHeader(name) {
-    document.getElementById("info-head").innerHTML = name;
+  setDataHeader(structure, name) {
+    document.getElementById("info-head-structure").innerHTML = structure;
+    document.getElementById("info-head-name").innerHTML = name;
   }
 
   pick(clickX, clickY) {
