@@ -1,5 +1,6 @@
 import {
   ShaderMaterial,
+  DoubleSide,
   Vector3,
 } from "https://unpkg.com/three@0.125.1/build/three.module.js";
 
@@ -93,6 +94,7 @@ function createMatCapMaterial(tex_r, tex_g, tex_b, tex_k) {
     vertexShader,
     fragmentShader,
   });
+  Material.side = DoubleSide;
 
   return Material;
 }
@@ -171,6 +173,7 @@ function createVertexScalarFunctionMaterial(tex_r, tex_g, tex_b, tex_k) {
     vertexShader,
     fragmentShader,
   });
+  Material.side = DoubleSide;
 
   return Material;
 }
@@ -309,6 +312,7 @@ function createSurfaceMeshPickMaterial() {
     fragmentShader,
   });
 
+  Material.side = DoubleSide;
   return Material;
 }
 
@@ -372,6 +376,7 @@ function createInstancedMatCapMaterial(tex_r, tex_g, tex_b, tex_k) {
     fragmentShader,
   });
 
+  Material.side = DoubleSide;
   return Material;
 }
 
@@ -439,6 +444,7 @@ function createInstancedScalarFunctionMaterial(tex_r, tex_g, tex_b, tex_k) {
     fragmentShader,
   });
 
+  Material.side = DoubleSide;
   return Material;
 }
 
@@ -474,6 +480,7 @@ function createPointCloudPickMaterial() {
     fragmentShader,
   });
 
+  Material.side = DoubleSide;
   return Material;
 }
 
@@ -540,6 +547,7 @@ function createCurveMatCapMaterial(tex_r, tex_g, tex_b, tex_k) {
     fragmentShader,
   });
 
+  Material.side = DoubleSide;
   return Material;
 }
 
