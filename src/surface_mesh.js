@@ -16,6 +16,7 @@ import {
 import { getNextUniqueColor } from "./color_utils.js";
 import { VertexScalarQuantity } from "./scalar_quantity.js";
 import { VertexVectorQuantity } from "./vector_quantity.js";
+import { VertexParameterizationQuantity } from "./parameterization_quantity.js";
 
 class SurfaceMesh {
   constructor(coords, faces, name, geopticEnvironment) {
@@ -55,6 +56,20 @@ class SurfaceMesh {
 
   addVertexVectorQuantity(name, values) {
     this.quantities[name] = new VertexVectorQuantity(name, values, this);
+
+    let quantityGui = this.guiFolder.addFolder(name);
+    this.quantities[name].initGui(this.guiFields, quantityGui);
+
+    return this.quantities[name];
+  }
+
+  addVertexParameterizationQuantity(name, values) {
+    this.gp.standardizeDataArray(values);
+    this.quantities[name] = new VertexParameterizationQuantity(
+      name,
+      values,
+      this
+    );
 
     let quantityGui = this.guiFolder.addFolder(name);
     this.quantities[name].initGui(this.guiFields, quantityGui);
@@ -354,16 +369,13 @@ class SurfaceMesh {
       this.getCorner = function (f, iV) {
         return f.get(iV);
       };
-    } else if (faces.get(0)[0]) {
+    } else {
       this.getCorner = function (f, iV) {
         return f[iV];
       };
     }
-    if (coords.get(0)[0]) {
-      this.getDim = function (coord, iD) {
-        return coord[iD];
-      };
-    } else if (coords.get(0).x) {
+
+    if (coords.get(0).x) {
       this.getDim = function (coord, iD) {
         if (iD == 0) {
           return coord.x;
@@ -372,6 +384,10 @@ class SurfaceMesh {
         } else {
           return coord.z;
         }
+      };
+    } else {
+      this.getDim = function (coord, iD) {
+        return coord[iD];
       };
     }
 

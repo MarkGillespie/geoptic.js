@@ -8,6 +8,13 @@
 
   var Stats__default = /*#__PURE__*/_interopDefaultLegacy(Stats);
 
+  let matcapIncludes = `
+        uniform sampler2D Matcap_r; // Matcap texture
+        uniform sampler2D Matcap_g; // Matcap texture
+        uniform sampler2D Matcap_b; // Matcap texture
+        uniform sampler2D Matcap_k; // Matcap texture
+`;
+
   let common = `
         float getEdgeFactor(vec3 UVW, vec3 edgeReal, float width) {
 
@@ -23,6 +30,18 @@
 
             float e = 1.0 - min(min(dist.x, dist.y), dist.z);
             return e;
+        }
+
+        vec4 lightSurfaceMat(vec3 color, vec2 Normal) {
+            vec4 mat_r = sRGBToLinear(texture2D(Matcap_r, Normal));
+            vec4 mat_g = sRGBToLinear(texture2D(Matcap_g, Normal));
+            vec4 mat_b = sRGBToLinear(texture2D(Matcap_b, Normal));
+            vec4 mat_k = sRGBToLinear(texture2D(Matcap_k, Normal));
+
+            vec4 colorCombined = color.r * mat_r + color.g * mat_g + color.b * mat_b +
+                                (1. - color.r - color.g - color.b) * mat_k;
+
+            return LinearTosRGB( colorCombined );
         }
 `;
 
@@ -50,10 +69,7 @@
     `;
 
     let fragmentShader = `
-        uniform sampler2D Matcap_r; // Matcap texture
-        uniform sampler2D Matcap_g; // Matcap texture
-        uniform sampler2D Matcap_b; // Matcap texture
-        uniform sampler2D Matcap_k; // Matcap texture
+        ${matcapIncludes}
         uniform vec3 color;
         uniform vec3 edgeColor;
         uniform float edgeWidth;
@@ -64,24 +80,8 @@
         ${common}
 
         void main(void){
-
-
             float alpha = getEdgeFactor(Barycoord, vec3(1.,1.,1.), edgeWidth);
-            vec2 coord = Point;
-
-            vec4 mat_r = sRGBToLinear(texture2D(Matcap_r, coord));
-            vec4 mat_g = sRGBToLinear(texture2D(Matcap_g, coord));
-            vec4 mat_b = sRGBToLinear(texture2D(Matcap_b, coord));
-            vec4 mat_k = sRGBToLinear(texture2D(Matcap_k, coord));
-
-            vec4 colorCombined = color.r * mat_r + color.g * mat_g + color.b * mat_b +
-                                (1. - color.r - color.g - color.b) * mat_k;
-
-            vec4 edgeColorCombined = edgeColor.r * mat_r + edgeColor.g * mat_g + edgeColor.b * mat_b +
-                                (1. - edgeColor.r - edgeColor.g - edgeColor.b) * mat_k;
-
-            gl_FragColor = (1.-alpha) * colorCombined + alpha * edgeColorCombined;
-            gl_FragColor = LinearTosRGB( gl_FragColor );
+            gl_FragColor = lightSurfaceMat((1.-alpha) * color + alpha * edgeColor, Point);
         }
     `;
 
@@ -130,10 +130,7 @@
     `;
 
     let fragmentShader = `
-        uniform sampler2D Matcap_r; // Matcap texture
-        uniform sampler2D Matcap_g; // Matcap texture
-        uniform sampler2D Matcap_b; // Matcap texture
-        uniform sampler2D Matcap_k; // Matcap texture
+        ${matcapIncludes}
         uniform vec3 edgeColor;
         uniform float edgeWidth;
 
@@ -145,23 +142,88 @@
 
         void main(void){
 
-
             float alpha = getEdgeFactor(Barycoord, vec3(1.,1.,1.), edgeWidth);
-            vec2 coord = Point;
+            gl_FragColor = lightSurfaceMat((1.-alpha) * Color + alpha * edgeColor, Point);
+        }
+    `;
+    let Material = new THREE.ShaderMaterial({
+      uniforms: {
+        Matcap_r: { value: tex_r },
+        Matcap_g: { value: tex_g },
+        Matcap_b: { value: tex_b },
+        Matcap_k: { value: tex_k },
+        edgeColor: { value: new THREE.Vector3(0, 0, 0) },
+        edgeWidth: { value: 0 },
+      },
+      vertexShader,
+      fragmentShader,
+    });
+    Material.side = THREE.DoubleSide;
 
-            vec4 mat_r = sRGBToLinear(texture2D(Matcap_r, coord));
-            vec4 mat_g = sRGBToLinear(texture2D(Matcap_g, coord));
-            vec4 mat_b = sRGBToLinear(texture2D(Matcap_b, coord));
-            vec4 mat_k = sRGBToLinear(texture2D(Matcap_k, coord));
+    return Material;
+  }
 
-            vec4 colorCombined = Color.r * mat_r + Color.g * mat_g + Color.b * mat_b +
-                                (1. - Color.r - Color.g - Color.b) * mat_k;
+  function VertexParamCheckerboard(tex_r, tex_g, tex_b, tex_k) {
+    let vertexShader = `
+        attribute vec3 barycoord;
+        attribute vec2 coord;
 
-            vec4 edgeColorCombined = edgeColor.r * mat_r + edgeColor.g * mat_g + edgeColor.b * mat_b +
-                                (1. - edgeColor.r - edgeColor.g - edgeColor.b) * mat_k;
+        varying vec2 Point;
+        varying vec3 Barycoord;
+        varying vec2 Coord;
 
-            gl_FragColor = (1.-alpha) * colorCombined + alpha * edgeColorCombined;
-            gl_FragColor = LinearTosRGB( gl_FragColor );
+        void main()
+        {
+            vec3 vNormal = ( mat3( modelViewMatrix ) * normal );
+            vNormal = normalize(vNormal);
+
+            // pull slightly inward, to reduce sampling artifacts near edges
+            Point.x = 0.93 * vNormal.x * 0.5 + 0.5;
+            Point.y = 0.93 * vNormal.y * 0.5 + 0.5;
+
+            Barycoord = barycoord;
+            Coord = coord;
+
+            gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+
+        }
+    `;
+
+    let fragmentShader = `
+        ${matcapIncludes}
+        uniform vec3 edgeColor;
+        uniform float edgeWidth;
+        uniform vec3 color1;
+        uniform vec3 color2;
+        uniform float paramScale;
+
+        varying vec2 Point;
+        varying vec3 Barycoord;
+        varying vec2 Coord;
+
+        ${common}
+
+        void main(void){
+            float alpha = getEdgeFactor(Barycoord, vec3(1.,1.,1.), edgeWidth);
+
+            // Apply the checkerboard effect
+            float mX = mod(Coord.x, 2.0 * paramScale) / paramScale - 1.f; // in [-1, 1]
+            float mY = mod(Coord.y, 2.0 * paramScale) / paramScale - 1.f;
+
+            float minD = min( min(abs(mX), 1.0 - abs(mX)), min(abs(mY), 1.0 - abs(mY))) * 2.; // rect distace from flipping sign in [0,1]
+            float p = 6.;
+            float minDSmooth = pow(minD, 1. / p);
+            // TODO do some clever screen space derivative thing to prevent aliasing
+
+            float v = (mX * mY); // in [-1, 1], color switches at 0
+            float adjV = sign(v) * minDSmooth;
+
+            float s = smoothstep(-1.f, 1.f, adjV);
+
+            vec3 outColor = (1.-s)*color1 + s* color2;
+
+            gl_FragColor = lightSurfaceMat((1.-alpha) * outColor + alpha * edgeColor, Point);
+
         }
     `;
 
@@ -173,6 +235,97 @@
         Matcap_k: { value: tex_k },
         edgeColor: { value: new THREE.Vector3(0, 0, 0) },
         edgeWidth: { value: 0 },
+        color1: { value: new THREE.Vector3(1, 1, 0) },
+        color2: { value: new THREE.Vector3(0, 1, 1) },
+        paramScale: { value: 1 },
+      },
+      vertexShader,
+      fragmentShader,
+    });
+    Material.side = THREE.DoubleSide;
+
+    return Material;
+  }
+
+  function VertexParamGrid(tex_r, tex_g, tex_b, tex_k) {
+    let vertexShader = `
+        attribute vec3 barycoord;
+        attribute vec2 coord;
+
+        varying vec2 Point;
+        varying vec3 Barycoord;
+        varying vec2 Coord;
+
+        void main()
+        {
+            vec3 vNormal = ( mat3( modelViewMatrix ) * normal );
+            vNormal = normalize(vNormal);
+
+            // pull slightly inward, to reduce sampling artifacts near edges
+            Point.x = 0.93 * vNormal.x * 0.5 + 0.5;
+            Point.y = 0.93 * vNormal.y * 0.5 + 0.5;
+
+            Barycoord = barycoord;
+            Coord = coord;
+
+            gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+
+        }
+    `;
+
+    let fragmentShader = `
+        ${matcapIncludes}
+        uniform vec3 edgeColor;
+        uniform float edgeWidth;
+        uniform vec3 color1;
+        uniform vec3 color2;
+        uniform float paramScale;
+
+        varying vec2 Point;
+        varying vec3 Barycoord;
+        varying vec2 Coord;
+
+        ${common}
+
+        void main(void){
+            float alpha = getEdgeFactor(Barycoord, vec3(1.,1.,1.), edgeWidth);
+
+
+            // Apply the checkerboard effect
+            float mX = mod(Coord.x, 2.0 * paramScale) / paramScale - 1.f; // in [-1, 1]
+            float mY = mod(Coord.y, 2.0 * paramScale) / paramScale - 1.f;
+
+
+            // rect distace from flipping sign in [0,1]
+            float minD = min(min(abs(mX), 1.0 - abs(mX)), min(abs(mY), 1.0 - abs(mY))) * 2.;
+
+            float width = 0.05;
+            float slopeWidthPix = 10.;
+
+            vec2 fw = fwidth(Coord);
+            float scale = max(fw.x, fw.y);
+            float pWidth = slopeWidthPix * scale;
+
+            float s = smoothstep(width, width + pWidth, minD);
+
+            vec3 outColor = (1.-s)*color1 + s* color2;
+
+            gl_FragColor = lightSurfaceMat((1.-alpha) * outColor + alpha * edgeColor, Point);
+
+        }
+    `;
+
+    let Material = new THREE.ShaderMaterial({
+      uniforms: {
+        Matcap_r: { value: tex_r },
+        Matcap_g: { value: tex_g },
+        Matcap_b: { value: tex_b },
+        Matcap_k: { value: tex_k },
+        edgeColor: { value: new THREE.Vector3(0, 0, 0) },
+        edgeWidth: { value: 0 },
+        color1: { value: new THREE.Vector3(1, 1, 0) },
+        color2: { value: new THREE.Vector3(0, 1, 1) },
+        paramScale: { value: 1 },
       },
       vertexShader,
       fragmentShader,
@@ -282,8 +435,6 @@
         varying vec3 EdgeColor2;
         varying vec3 FaceColor;
 
-        ${common}
-
         void main(void){
 
             // Parameters defining the pick shape (in barycentric 0-1 units)
@@ -340,10 +491,7 @@
     `;
 
     let fragmentShader = `
-        uniform sampler2D Matcap_r; // Matcap texture
-        uniform sampler2D Matcap_g; // Matcap texture
-        uniform sampler2D Matcap_b; // Matcap texture
-        uniform sampler2D Matcap_k; // Matcap texture
+        ${matcapIncludes}
         uniform vec3 color;
 
         varying vec2 Point;
@@ -351,19 +499,7 @@
         ${common}
 
         void main(void){
-
-            vec2 coord = Point;
-
-            vec4 mat_r = sRGBToLinear(texture2D(Matcap_r, coord));
-            vec4 mat_g = sRGBToLinear(texture2D(Matcap_g, coord));
-            vec4 mat_b = sRGBToLinear(texture2D(Matcap_b, coord));
-            vec4 mat_k = sRGBToLinear(texture2D(Matcap_k, coord));
-
-            vec4 colorCombined = color.r * mat_r + color.g * mat_g + color.b * mat_b +
-                                (1. - color.r - color.g - color.b) * mat_k;
-
-            gl_FragColor = colorCombined;
-            gl_FragColor = LinearTosRGB( gl_FragColor );
+            gl_FragColor = lightSurfaceMat(color, Point);
         }
     `;
 
@@ -409,10 +545,7 @@
     `;
 
     let fragmentShader = `
-        uniform sampler2D Matcap_r; // Matcap texture
-        uniform sampler2D Matcap_g; // Matcap texture
-        uniform sampler2D Matcap_b; // Matcap texture
-        uniform sampler2D Matcap_k; // Matcap texture
+        ${matcapIncludes}
 
         varying vec3 Color;
         varying vec2 Point;
@@ -420,19 +553,7 @@
         ${common}
 
         void main(void){
-
-            vec2 coord = Point;
-
-            vec4 mat_r = sRGBToLinear(texture2D(Matcap_r, coord));
-            vec4 mat_g = sRGBToLinear(texture2D(Matcap_g, coord));
-            vec4 mat_b = sRGBToLinear(texture2D(Matcap_b, coord));
-            vec4 mat_k = sRGBToLinear(texture2D(Matcap_k, coord));
-
-            vec4 colorCombined = Color.r * mat_r + Color.g * mat_g + Color.b * mat_b +
-                                (1. - Color.r - Color.g - Color.b) * mat_k;
-
-            gl_FragColor = colorCombined;
-            gl_FragColor = LinearTosRGB( gl_FragColor );
+            gl_FragColor = lightSurfaceMat(Color, Point);
         }
     `;
 
@@ -472,8 +593,6 @@
     let fragmentShader = `
         varying vec3 Color;
 
-        ${common}
-
         void main(void){
             gl_FragColor = vec4(Color, 1.);
         }
@@ -511,10 +630,7 @@
     `;
 
     let fragmentShader = `
-        uniform sampler2D Matcap_r; // Matcap texture
-        uniform sampler2D Matcap_g; // Matcap texture
-        uniform sampler2D Matcap_b; // Matcap texture
-        uniform sampler2D Matcap_k; // Matcap texture
+        ${matcapIncludes}
         uniform vec3 color;
 
         varying vec2 Point;
@@ -522,19 +638,7 @@
         ${common}
 
         void main(void){
-
-            vec2 coord = Point;
-
-            vec4 mat_r = sRGBToLinear(texture2D(Matcap_r, coord));
-            vec4 mat_g = sRGBToLinear(texture2D(Matcap_g, coord));
-            vec4 mat_b = sRGBToLinear(texture2D(Matcap_b, coord));
-            vec4 mat_k = sRGBToLinear(texture2D(Matcap_k, coord));
-
-            vec4 colorCombined = color.r * mat_r + color.g * mat_g + color.b * mat_b +
-                                (1. - color.r - color.g - color.b) * mat_k;
-
-            gl_FragColor = colorCombined;
-            gl_FragColor = LinearTosRGB( gl_FragColor );
+            gl_FragColor = lightSurfaceMat(color, Point);
         }
     `;
 
@@ -1152,6 +1256,187 @@
     }
   }
 
+  class VertexParameterizationQuantity {
+    constructor(name, coords, parentMesh) {
+      this.parent = parentMesh;
+      this.gp = this.parent.gp;
+      this.coords = coords;
+      this.name = name;
+      this.enabled = false;
+
+      this.isDominantQuantity = true;
+
+      // create a new mesh material
+      let functionMaterial = VertexParamCheckerboard(
+        this.gp.matcapTextures.r,
+        this.gp.matcapTextures.g,
+        this.gp.matcapTextures.b,
+        this.gp.matcapTextures.k
+      );
+
+      // build a three.js mesh to visualize the function
+      this.mesh = new THREE.Mesh(this.parent.mesh.geometry.clone(), functionMaterial);
+      this.initParam(coords);
+
+      // Copy some attributes from parent
+      this.mesh.geometry.attributes.position = this.parent.mesh.geometry.attributes.position;
+      this.mesh.geometry.attributes.normal = this.parent.mesh.geometry.attributes.normal;
+      this.mesh.material.uniforms.edgeWidth = this.parent.mesh.material.uniforms.edgeWidth;
+      this.mesh.material.uniforms.edgeColor = this.parent.mesh.material.uniforms.edgeColor;
+    }
+
+    initGui(guiFields, guiFolder) {
+      this.prefix = this.parent.name + "#" + this.name;
+      this.guiFields = guiFields;
+
+      guiFields[this.prefix + "#Enabled"] = false;
+      guiFolder
+        .add(guiFields, this.prefix + "#Enabled")
+        .onChange((e) => {
+          this.setEnabled(e);
+        })
+        .listen()
+        .name("Enabled");
+
+      guiFields[this.prefix + "#Style"] = "checker";
+      // this.applyStyle(guiFields[this.prefix + "#Style"]);
+      guiFolder
+        .add(guiFields, this.prefix + "#Style", ["checker", "grid"])
+        .onChange((s) => {
+          this.applyStyle(s);
+        })
+        .listen()
+        .name("Color Map");
+
+      guiFields[this.name + "#Color1"] = [255, 125, 255];
+      this.setColor1(guiFields[this.name + "#Color1"]);
+      guiFolder
+        .addColor(guiFields, this.name + "#Color1")
+        .onChange((c) => {
+          this.setColor1(c);
+        })
+        .listen()
+        .name("Color");
+
+      guiFields[this.name + "#Color2"] = [25, 25, 125];
+      this.setColor2(guiFields[this.name + "#Color2"]);
+      guiFolder
+        .addColor(guiFields, this.name + "#Color2")
+        .onChange((c) => {
+          this.setColor2(c);
+        })
+        .listen()
+        .name("Color");
+
+      guiFields[this.name + "#Scale"] = 1;
+      this.setScale(guiFields[this.name + "#Scale"]);
+      guiFolder
+        .add(guiFields, this.name + "#Scale")
+        .min(0)
+        .max(2)
+        .step(0.05)
+        .onChange((scale) => {
+          this.setScale(scale);
+        })
+        .listen()
+        .name("Scale");
+    }
+
+    setScale(scale) {
+      this.mesh.material.uniforms.paramScale.value = scale / 10;
+    }
+
+    setColor1(color) {
+      let c = new THREE.Vector3(color[0] / 255, color[1] / 255, color[2] / 255);
+      this.mesh.material.uniforms.color1.value = c;
+    }
+
+    setColor2(color) {
+      let c = new THREE.Vector3(color[0] / 255, color[1] / 255, color[2] / 255);
+      this.mesh.material.uniforms.color2.value = c;
+    }
+
+    setEnabled(enabled) {
+      this.guiFields[this.prefix + "#Enabled"] = enabled;
+      this.enabled = enabled;
+      if (enabled) {
+        this.parent.enableQuantity(this);
+      } else {
+        this.parent.disableQuantity(this);
+      }
+    }
+
+    applyStyle(style) {
+      if (style == "checker") {
+        this.mesh.material = VertexParamCheckerboard(
+          this.gp.matcapTextures.r,
+          this.gp.matcapTextures.g,
+          this.gp.matcapTextures.b,
+          this.gp.matcapTextures.k
+        );
+      } else if (style == "grid") {
+        this.mesh.material = VertexParamGrid(
+          this.gp.matcapTextures.r,
+          this.gp.matcapTextures.g,
+          this.gp.matcapTextures.b,
+          this.gp.matcapTextures.k
+        );
+      }
+      // Reset material uniforms
+      this.setColor1(this.guiFields[this.name + "#Color1"]);
+      this.setColor2(this.guiFields[this.name + "#Color2"]);
+      this.setScale(this.guiFields[this.name + "#Scale"]);
+    }
+
+    initParam(coords) {
+      if (coords.get(0).x) {
+        this.getDim = function (coord, iD) {
+          if (iD == 0) {
+            return coord.x;
+          } else if (iD == 1) {
+            return coord.y;
+          } else {
+            return coord.z;
+          }
+        };
+      } else {
+        this.getDim = function (coord, iD) {
+          return coord[iD];
+        };
+      }
+
+      // fill position and barycoord buffers
+      let F = this.parent.faces.size();
+      let coordArray = new Float32Array(F * 3 * 2);
+      for (let iF = 0; iF < F; iF++) {
+        let face = this.parent.faces.get(iF);
+        for (let iV = 0; iV < 3; iV++) {
+          let coord = coords.get(this.parent.getCorner(face, iV));
+          for (let iD = 0; iD < 2; ++iD) {
+            coordArray[3 * 2 * iF + 2 * iV + iD] = this.getDim(coord, iD);
+          }
+        }
+      }
+
+      this.mesh.geometry.setAttribute(
+        "coord",
+        new THREE.BufferAttribute(coordArray, 2)
+      );
+    }
+
+    getVertexValue(iV) {
+      return this.gp.prettyVector2(this.coords.get(iV));
+    }
+    getEdgeValue(iE) {
+      return undefined;
+    }
+    getFaceValue(iE) {
+      return undefined;
+    }
+
+    remove() {}
+  }
+
   class SurfaceMesh {
     constructor(coords, faces, name, geopticEnvironment) {
       this.gp = geopticEnvironment;
@@ -1190,6 +1475,20 @@
 
     addVertexVectorQuantity(name, values) {
       this.quantities[name] = new VertexVectorQuantity(name, values, this);
+
+      let quantityGui = this.guiFolder.addFolder(name);
+      this.quantities[name].initGui(this.guiFields, quantityGui);
+
+      return this.quantities[name];
+    }
+
+    addVertexParameterizationQuantity(name, values) {
+      this.gp.standardizeDataArray(values);
+      this.quantities[name] = new VertexParameterizationQuantity(
+        name,
+        values,
+        this
+      );
 
       let quantityGui = this.guiFolder.addFolder(name);
       this.quantities[name].initGui(this.guiFields, quantityGui);
@@ -1489,16 +1788,13 @@
         this.getCorner = function (f, iV) {
           return f.get(iV);
         };
-      } else if (faces.get(0)[0]) {
+      } else {
         this.getCorner = function (f, iV) {
           return f[iV];
         };
       }
-      if (coords.get(0)[0]) {
-        this.getDim = function (coord, iD) {
-          return coord[iD];
-        };
-      } else if (coords.get(0).x) {
+
+      if (coords.get(0).x) {
         this.getDim = function (coord, iD) {
           if (iD == 0) {
             return coord.x;
@@ -1507,6 +1803,10 @@
           } else {
             return coord.z;
           }
+        };
+      } else {
+        this.getDim = function (coord, iD) {
+          return coord[iD];
         };
       }
 
@@ -2647,18 +2947,16 @@
       return d.toFixed(5);
     }
 
+    prettyVector2(vec) {
+      if (vec.x) {
+        return "(" + vec.x.toFixed(2) + ", " + vec.y.toFixed(2) + ")";
+      } else {
+        return "(" + vec[0].toFixed(2) + ", " + vec[1].toFixed(2) + ")";
+      }
+    }
+
     prettyVector(vec) {
-      if (vec[0]) {
-        return (
-          "(" +
-          vec[0].toFixed(2) +
-          ", " +
-          vec[1].toFixed(2) +
-          ", " +
-          vec[2].toFixed(2) +
-          ")"
-        );
-      } else if (vec.x) {
+      if (vec.x) {
         return (
           "(" +
           vec.x.toFixed(2) +
@@ -2666,6 +2964,16 @@
           vec.y.toFixed(2) +
           ", " +
           vec.z.toFixed(2) +
+          ")"
+        );
+      } else {
+        return (
+          "(" +
+          vec[0].toFixed(2) +
+          ", " +
+          vec[1].toFixed(2) +
+          ", " +
+          vec[2].toFixed(2) +
           ")"
         );
       }

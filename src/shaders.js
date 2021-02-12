@@ -4,6 +4,13 @@ import {
   Vector3,
 } from "https://unpkg.com/three@0.125.1/build/three.module.js";
 
+let matcapIncludes = `
+        uniform sampler2D Matcap_r; // Matcap texture
+        uniform sampler2D Matcap_g; // Matcap texture
+        uniform sampler2D Matcap_b; // Matcap texture
+        uniform sampler2D Matcap_k; // Matcap texture
+`;
+
 let common = `
         float getEdgeFactor(vec3 UVW, vec3 edgeReal, float width) {
 
@@ -19,6 +26,18 @@ let common = `
 
             float e = 1.0 - min(min(dist.x, dist.y), dist.z);
             return e;
+        }
+
+        vec4 lightSurfaceMat(vec3 color, vec2 Normal) {
+            vec4 mat_r = sRGBToLinear(texture2D(Matcap_r, Normal));
+            vec4 mat_g = sRGBToLinear(texture2D(Matcap_g, Normal));
+            vec4 mat_b = sRGBToLinear(texture2D(Matcap_b, Normal));
+            vec4 mat_k = sRGBToLinear(texture2D(Matcap_k, Normal));
+
+            vec4 colorCombined = color.r * mat_r + color.g * mat_g + color.b * mat_b +
+                                (1. - color.r - color.g - color.b) * mat_k;
+
+            return LinearTosRGB( colorCombined );
         }
 `;
 
@@ -46,10 +65,7 @@ function createMatCapMaterial(tex_r, tex_g, tex_b, tex_k) {
     `;
 
   let fragmentShader = `
-        uniform sampler2D Matcap_r; // Matcap texture
-        uniform sampler2D Matcap_g; // Matcap texture
-        uniform sampler2D Matcap_b; // Matcap texture
-        uniform sampler2D Matcap_k; // Matcap texture
+        ${matcapIncludes}
         uniform vec3 color;
         uniform vec3 edgeColor;
         uniform float edgeWidth;
@@ -60,24 +76,8 @@ function createMatCapMaterial(tex_r, tex_g, tex_b, tex_k) {
         ${common}
 
         void main(void){
-
-
             float alpha = getEdgeFactor(Barycoord, vec3(1.,1.,1.), edgeWidth);
-            vec2 coord = Point;
-
-            vec4 mat_r = sRGBToLinear(texture2D(Matcap_r, coord));
-            vec4 mat_g = sRGBToLinear(texture2D(Matcap_g, coord));
-            vec4 mat_b = sRGBToLinear(texture2D(Matcap_b, coord));
-            vec4 mat_k = sRGBToLinear(texture2D(Matcap_k, coord));
-
-            vec4 colorCombined = color.r * mat_r + color.g * mat_g + color.b * mat_b +
-                                (1. - color.r - color.g - color.b) * mat_k;
-
-            vec4 edgeColorCombined = edgeColor.r * mat_r + edgeColor.g * mat_g + edgeColor.b * mat_b +
-                                (1. - edgeColor.r - edgeColor.g - edgeColor.b) * mat_k;
-
-            gl_FragColor = (1.-alpha) * colorCombined + alpha * edgeColorCombined;
-            gl_FragColor = LinearTosRGB( gl_FragColor );
+            gl_FragColor = lightSurfaceMat((1.-alpha) * color + alpha * edgeColor, Point);
         }
     `;
 
@@ -126,10 +126,7 @@ function createVertexScalarFunctionMaterial(tex_r, tex_g, tex_b, tex_k) {
     `;
 
   let fragmentShader = `
-        uniform sampler2D Matcap_r; // Matcap texture
-        uniform sampler2D Matcap_g; // Matcap texture
-        uniform sampler2D Matcap_b; // Matcap texture
-        uniform sampler2D Matcap_k; // Matcap texture
+        ${matcapIncludes}
         uniform vec3 edgeColor;
         uniform float edgeWidth;
 
@@ -141,23 +138,88 @@ function createVertexScalarFunctionMaterial(tex_r, tex_g, tex_b, tex_k) {
 
         void main(void){
 
-
             float alpha = getEdgeFactor(Barycoord, vec3(1.,1.,1.), edgeWidth);
-            vec2 coord = Point;
+            gl_FragColor = lightSurfaceMat((1.-alpha) * Color + alpha * edgeColor, Point);
+        }
+    `;
+  let Material = new ShaderMaterial({
+    uniforms: {
+      Matcap_r: { value: tex_r },
+      Matcap_g: { value: tex_g },
+      Matcap_b: { value: tex_b },
+      Matcap_k: { value: tex_k },
+      edgeColor: { value: new Vector3(0, 0, 0) },
+      edgeWidth: { value: 0 },
+    },
+    vertexShader,
+    fragmentShader,
+  });
+  Material.side = DoubleSide;
 
-            vec4 mat_r = sRGBToLinear(texture2D(Matcap_r, coord));
-            vec4 mat_g = sRGBToLinear(texture2D(Matcap_g, coord));
-            vec4 mat_b = sRGBToLinear(texture2D(Matcap_b, coord));
-            vec4 mat_k = sRGBToLinear(texture2D(Matcap_k, coord));
+  return Material;
+}
 
-            vec4 colorCombined = Color.r * mat_r + Color.g * mat_g + Color.b * mat_b +
-                                (1. - Color.r - Color.g - Color.b) * mat_k;
+function VertexParamCheckerboard(tex_r, tex_g, tex_b, tex_k) {
+  let vertexShader = `
+        attribute vec3 barycoord;
+        attribute vec2 coord;
 
-            vec4 edgeColorCombined = edgeColor.r * mat_r + edgeColor.g * mat_g + edgeColor.b * mat_b +
-                                (1. - edgeColor.r - edgeColor.g - edgeColor.b) * mat_k;
+        varying vec2 Point;
+        varying vec3 Barycoord;
+        varying vec2 Coord;
 
-            gl_FragColor = (1.-alpha) * colorCombined + alpha * edgeColorCombined;
-            gl_FragColor = LinearTosRGB( gl_FragColor );
+        void main()
+        {
+            vec3 vNormal = ( mat3( modelViewMatrix ) * normal );
+            vNormal = normalize(vNormal);
+
+            // pull slightly inward, to reduce sampling artifacts near edges
+            Point.x = 0.93 * vNormal.x * 0.5 + 0.5;
+            Point.y = 0.93 * vNormal.y * 0.5 + 0.5;
+
+            Barycoord = barycoord;
+            Coord = coord;
+
+            gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+
+        }
+    `;
+
+  let fragmentShader = `
+        ${matcapIncludes}
+        uniform vec3 edgeColor;
+        uniform float edgeWidth;
+        uniform vec3 color1;
+        uniform vec3 color2;
+        uniform float paramScale;
+
+        varying vec2 Point;
+        varying vec3 Barycoord;
+        varying vec2 Coord;
+
+        ${common}
+
+        void main(void){
+            float alpha = getEdgeFactor(Barycoord, vec3(1.,1.,1.), edgeWidth);
+
+            // Apply the checkerboard effect
+            float mX = mod(Coord.x, 2.0 * paramScale) / paramScale - 1.f; // in [-1, 1]
+            float mY = mod(Coord.y, 2.0 * paramScale) / paramScale - 1.f;
+
+            float minD = min( min(abs(mX), 1.0 - abs(mX)), min(abs(mY), 1.0 - abs(mY))) * 2.; // rect distace from flipping sign in [0,1]
+            float p = 6.;
+            float minDSmooth = pow(minD, 1. / p);
+            // TODO do some clever screen space derivative thing to prevent aliasing
+
+            float v = (mX * mY); // in [-1, 1], color switches at 0
+            float adjV = sign(v) * minDSmooth;
+
+            float s = smoothstep(-1.f, 1.f, adjV);
+
+            vec3 outColor = (1.-s)*color1 + s* color2;
+
+            gl_FragColor = lightSurfaceMat((1.-alpha) * outColor + alpha * edgeColor, Point);
+
         }
     `;
 
@@ -169,6 +231,97 @@ function createVertexScalarFunctionMaterial(tex_r, tex_g, tex_b, tex_k) {
       Matcap_k: { value: tex_k },
       edgeColor: { value: new Vector3(0, 0, 0) },
       edgeWidth: { value: 0 },
+      color1: { value: new Vector3(1, 1, 0) },
+      color2: { value: new Vector3(0, 1, 1) },
+      paramScale: { value: 1 },
+    },
+    vertexShader,
+    fragmentShader,
+  });
+  Material.side = DoubleSide;
+
+  return Material;
+}
+
+function VertexParamGrid(tex_r, tex_g, tex_b, tex_k) {
+  let vertexShader = `
+        attribute vec3 barycoord;
+        attribute vec2 coord;
+
+        varying vec2 Point;
+        varying vec3 Barycoord;
+        varying vec2 Coord;
+
+        void main()
+        {
+            vec3 vNormal = ( mat3( modelViewMatrix ) * normal );
+            vNormal = normalize(vNormal);
+
+            // pull slightly inward, to reduce sampling artifacts near edges
+            Point.x = 0.93 * vNormal.x * 0.5 + 0.5;
+            Point.y = 0.93 * vNormal.y * 0.5 + 0.5;
+
+            Barycoord = barycoord;
+            Coord = coord;
+
+            gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+
+        }
+    `;
+
+  let fragmentShader = `
+        ${matcapIncludes}
+        uniform vec3 edgeColor;
+        uniform float edgeWidth;
+        uniform vec3 color1;
+        uniform vec3 color2;
+        uniform float paramScale;
+
+        varying vec2 Point;
+        varying vec3 Barycoord;
+        varying vec2 Coord;
+
+        ${common}
+
+        void main(void){
+            float alpha = getEdgeFactor(Barycoord, vec3(1.,1.,1.), edgeWidth);
+
+
+            // Apply the checkerboard effect
+            float mX = mod(Coord.x, 2.0 * paramScale) / paramScale - 1.f; // in [-1, 1]
+            float mY = mod(Coord.y, 2.0 * paramScale) / paramScale - 1.f;
+
+
+            // rect distace from flipping sign in [0,1]
+            float minD = min(min(abs(mX), 1.0 - abs(mX)), min(abs(mY), 1.0 - abs(mY))) * 2.;
+
+            float width = 0.05;
+            float slopeWidthPix = 10.;
+
+            vec2 fw = fwidth(Coord);
+            float scale = max(fw.x, fw.y);
+            float pWidth = slopeWidthPix * scale;
+
+            float s = smoothstep(width, width + pWidth, minD);
+
+            vec3 outColor = (1.-s)*color1 + s* color2;
+
+            gl_FragColor = lightSurfaceMat((1.-alpha) * outColor + alpha * edgeColor, Point);
+
+        }
+    `;
+
+  let Material = new ShaderMaterial({
+    uniforms: {
+      Matcap_r: { value: tex_r },
+      Matcap_g: { value: tex_g },
+      Matcap_b: { value: tex_b },
+      Matcap_k: { value: tex_k },
+      edgeColor: { value: new Vector3(0, 0, 0) },
+      edgeWidth: { value: 0 },
+      color1: { value: new Vector3(1, 1, 0) },
+      color2: { value: new Vector3(0, 1, 1) },
+      paramScale: { value: 1 },
     },
     vertexShader,
     fragmentShader,
@@ -278,8 +431,6 @@ function createSurfaceMeshPickMaterial() {
         varying vec3 EdgeColor2;
         varying vec3 FaceColor;
 
-        ${common}
-
         void main(void){
 
             // Parameters defining the pick shape (in barycentric 0-1 units)
@@ -336,10 +487,7 @@ function createInstancedMatCapMaterial(tex_r, tex_g, tex_b, tex_k) {
     `;
 
   let fragmentShader = `
-        uniform sampler2D Matcap_r; // Matcap texture
-        uniform sampler2D Matcap_g; // Matcap texture
-        uniform sampler2D Matcap_b; // Matcap texture
-        uniform sampler2D Matcap_k; // Matcap texture
+        ${matcapIncludes}
         uniform vec3 color;
 
         varying vec2 Point;
@@ -347,19 +495,7 @@ function createInstancedMatCapMaterial(tex_r, tex_g, tex_b, tex_k) {
         ${common}
 
         void main(void){
-
-            vec2 coord = Point;
-
-            vec4 mat_r = sRGBToLinear(texture2D(Matcap_r, coord));
-            vec4 mat_g = sRGBToLinear(texture2D(Matcap_g, coord));
-            vec4 mat_b = sRGBToLinear(texture2D(Matcap_b, coord));
-            vec4 mat_k = sRGBToLinear(texture2D(Matcap_k, coord));
-
-            vec4 colorCombined = color.r * mat_r + color.g * mat_g + color.b * mat_b +
-                                (1. - color.r - color.g - color.b) * mat_k;
-
-            gl_FragColor = colorCombined;
-            gl_FragColor = LinearTosRGB( gl_FragColor );
+            gl_FragColor = lightSurfaceMat(color, Point);
         }
     `;
 
@@ -405,10 +541,7 @@ function createInstancedScalarFunctionMaterial(tex_r, tex_g, tex_b, tex_k) {
     `;
 
   let fragmentShader = `
-        uniform sampler2D Matcap_r; // Matcap texture
-        uniform sampler2D Matcap_g; // Matcap texture
-        uniform sampler2D Matcap_b; // Matcap texture
-        uniform sampler2D Matcap_k; // Matcap texture
+        ${matcapIncludes}
 
         varying vec3 Color;
         varying vec2 Point;
@@ -416,19 +549,7 @@ function createInstancedScalarFunctionMaterial(tex_r, tex_g, tex_b, tex_k) {
         ${common}
 
         void main(void){
-
-            vec2 coord = Point;
-
-            vec4 mat_r = sRGBToLinear(texture2D(Matcap_r, coord));
-            vec4 mat_g = sRGBToLinear(texture2D(Matcap_g, coord));
-            vec4 mat_b = sRGBToLinear(texture2D(Matcap_b, coord));
-            vec4 mat_k = sRGBToLinear(texture2D(Matcap_k, coord));
-
-            vec4 colorCombined = Color.r * mat_r + Color.g * mat_g + Color.b * mat_b +
-                                (1. - Color.r - Color.g - Color.b) * mat_k;
-
-            gl_FragColor = colorCombined;
-            gl_FragColor = LinearTosRGB( gl_FragColor );
+            gl_FragColor = lightSurfaceMat(Color, Point);
         }
     `;
 
@@ -468,8 +589,6 @@ function createPointCloudPickMaterial() {
   let fragmentShader = `
         varying vec3 Color;
 
-        ${common}
-
         void main(void){
             gl_FragColor = vec4(Color, 1.);
         }
@@ -507,10 +626,7 @@ function createCurveMatCapMaterial(tex_r, tex_g, tex_b, tex_k) {
     `;
 
   let fragmentShader = `
-        uniform sampler2D Matcap_r; // Matcap texture
-        uniform sampler2D Matcap_g; // Matcap texture
-        uniform sampler2D Matcap_b; // Matcap texture
-        uniform sampler2D Matcap_k; // Matcap texture
+        ${matcapIncludes}
         uniform vec3 color;
 
         varying vec2 Point;
@@ -518,19 +634,7 @@ function createCurveMatCapMaterial(tex_r, tex_g, tex_b, tex_k) {
         ${common}
 
         void main(void){
-
-            vec2 coord = Point;
-
-            vec4 mat_r = sRGBToLinear(texture2D(Matcap_r, coord));
-            vec4 mat_g = sRGBToLinear(texture2D(Matcap_g, coord));
-            vec4 mat_b = sRGBToLinear(texture2D(Matcap_b, coord));
-            vec4 mat_k = sRGBToLinear(texture2D(Matcap_k, coord));
-
-            vec4 colorCombined = color.r * mat_r + color.g * mat_g + color.b * mat_b +
-                                (1. - color.r - color.g - color.b) * mat_k;
-
-            gl_FragColor = colorCombined;
-            gl_FragColor = LinearTosRGB( gl_FragColor );
+            gl_FragColor = lightSurfaceMat(color, Point);
         }
     `;
 
@@ -555,6 +659,8 @@ export {
   createMatCapMaterial,
   createInstancedMatCapMaterial,
   createVertexScalarFunctionMaterial,
+  VertexParamCheckerboard,
+  VertexParamGrid,
   createInstancedScalarFunctionMaterial,
   createSurfaceMeshPickMaterial,
   createPointCloudPickMaterial,

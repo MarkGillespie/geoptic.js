@@ -552,18 +552,16 @@ class Geoptic {
     return d.toFixed(5);
   }
 
+  prettyVector2(vec) {
+    if (vec.x) {
+      return "(" + vec.x.toFixed(2) + ", " + vec.y.toFixed(2) + ")";
+    } else {
+      return "(" + vec[0].toFixed(2) + ", " + vec[1].toFixed(2) + ")";
+    }
+  }
+
   prettyVector(vec) {
-    if (vec[0]) {
-      return (
-        "(" +
-        vec[0].toFixed(2) +
-        ", " +
-        vec[1].toFixed(2) +
-        ", " +
-        vec[2].toFixed(2) +
-        ")"
-      );
-    } else if (vec.x) {
+    if (vec.x) {
       return (
         "(" +
         vec.x.toFixed(2) +
@@ -571,6 +569,16 @@ class Geoptic {
         vec.y.toFixed(2) +
         ", " +
         vec.z.toFixed(2) +
+        ")"
+      );
+    } else {
+      return (
+        "(" +
+        vec[0].toFixed(2) +
+        ", " +
+        vec[1].toFixed(2) +
+        ", " +
+        vec[2].toFixed(2) +
         ")"
       );
     }
