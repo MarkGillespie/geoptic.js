@@ -64,7 +64,7 @@ class VertexParameterizationQuantity {
       .listen()
       .name("Color Map");
 
-    guiFields[this.name + "#Color1"] = [255, 125, 255];
+    guiFields[this.name + "#Color1"] = [249, 45, 94];
     this.setColor1(guiFields[this.name + "#Color1"]);
     const color1Button = guiFolder
       .addColor(guiFields, this.name + "#Color1")
@@ -74,7 +74,7 @@ class VertexParameterizationQuantity {
       .listen()
       .name("Color");
 
-    guiFields[this.name + "#Color2"] = [25, 25, 125];
+    guiFields[this.name + "#Color2"] = [249, 219, 225];
     this.setColor2(guiFields[this.name + "#Color2"]);
     const color2Button = guiFolder
       .addColor(guiFields, this.name + "#Color2")
