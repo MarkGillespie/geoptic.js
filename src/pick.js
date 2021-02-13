@@ -10,6 +10,9 @@ let nextPickBufferInd = 1; // 0 returned by dat.gui?
 
 let structureRanges = [];
 
+let pickRenderTarget = new WebGLRenderTarget();
+pickRenderTarget.texture.generateMipmaps = false;
+
 function requestPickBufferRange(structure, count) {
   let structureStart = nextPickBufferInd;
   let structureEnd = nextPickBufferInd + count;
@@ -57,17 +60,16 @@ function evaluatePickQuery(
   height
 ) {
   // draw
-  let pickTarget = new WebGLRenderTarget(width, height);
-  pickTarget.texture.generateMipmaps = false;
-  pickRenderer.setRenderTarget(pickTarget);
+  pickRenderTarget.setSize(width, height);
+  pickRenderer.setRenderTarget(pickRenderTarget);
   pickRenderer.render(pickScene, camera);
 
   // read color
   let pixelBuffer = new Uint8Array(4);
   pickRenderer.readRenderTargetPixels(
-    pickTarget,
+    pickRenderTarget,
     xPos,
-    pickTarget.height - yPos,
+    pickRenderTarget.height - yPos,
     1,
     1,
     pixelBuffer
