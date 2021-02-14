@@ -412,14 +412,6 @@ class SurfaceMesh {
     if (localInd < this.facePickIndStart) {
       this.gp.setDataHeader(`Surface Mesh ${this.name}`, `Vertex ${localInd}`);
 
-      console.log(
-        "Vertex ",
-        localInd,
-        " position ",
-        this.coords[localInd],
-        this
-      );
-
       this.gp.clearDataFields();
       this.gp.showDataField(
         "position",
