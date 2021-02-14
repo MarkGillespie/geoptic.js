@@ -21,7 +21,7 @@ import { VertexParameterizationQuantity } from "./parameterization_quantity.js";
 class SurfaceMesh {
   constructor(coords, faces, name, geopticEnvironment, options = {}) {
     this.gp = geopticEnvironment;
-    this.nV = coords.size();
+    this.nV = coords.length;
     this.coords = coords;
     this.faces = faces;
     this.name = name;
@@ -45,6 +45,10 @@ class SurfaceMesh {
 
     this.guiFields = undefined;
     this.guiFolder = undefined;
+
+    this.vertexPickCallback = (iV) => {};
+    this.edgePickCallback = (iE) => {};
+    this.facePickCallback = (iF) => {};
   }
 
   addVertexScalarQuantity(name, values) {
@@ -90,7 +94,7 @@ class SurfaceMesh {
     let vertexInfo = document.createElement("span");
     vertexInfo.innerHTML = "#verts: " + this.nV;
     let faceInfo = document.createElement("span");
-    faceInfo.innerHTML = "   #faces: " + this.faces.size();
+    faceInfo.innerHTML = "   #faces: " + this.faces.length;
     meshInfoBox.appendChild(vertexInfo);
     meshInfoBox.appendChild(faceInfo);
 
@@ -279,7 +283,7 @@ class SurfaceMesh {
   computeSmoothNormals() {
     // TODO: handle non-triangular face
     let V = this.nV;
-    let F = this.faces.size();
+    let F = this.faces.length;
     let vertexNormals = new Float32Array(V * 3);
     for (let iV = 0; iV < V; ++iV) {
       vertexNormals[3 * iV + 0] = 0;
@@ -289,9 +293,9 @@ class SurfaceMesh {
 
     const currNormals = this.mesh.geometry.attributes.normal.array;
     for (let iF = 0; iF < F; iF++) {
-      let face = this.faces.get(iF);
+      let face = this.faces[iF];
       for (let iV = 0; iV < 3; iV++) {
-        let v = this.getCorner(face, iV);
+        let v = face[iV];
         for (let iD = 0; iD < 3; ++iD) {
           vertexNormals[3 * v + iD] += currNormals[3 * 3 * iF + 3 * iV + iD];
         }
@@ -312,11 +316,10 @@ class SurfaceMesh {
 
     let normals = new Float32Array(F * 3 * 3);
     for (let iF = 0; iF < F; iF++) {
-      let face = this.faces.get(iF);
+      let face = this.faces[iF];
       for (let iV = 0; iV < 3; iV++) {
         for (let iD = 0; iD < 3; ++iD) {
-          normals[3 * 3 * iF + 3 * iV + iD] =
-            vertexNormals[3 * this.getCorner(face, iV) + iD];
+          normals[3 * 3 * iF + 3 * iV + iD] = vertexNormals[3 * face[iV] + iD];
         }
       }
     }
@@ -372,43 +375,17 @@ class SurfaceMesh {
     // create geometry object
     let threeGeometry = new BufferGeometry();
 
-    if (faces.get(0).get) {
-      this.getCorner = function (f, iV) {
-        return f.get(iV);
-      };
-    } else {
-      this.getCorner = function (f, iV) {
-        return f[iV];
-      };
-    }
-
-    if (coords.get(0).x) {
-      this.getDim = function (coord, iD) {
-        if (iD == 0) {
-          return coord.x;
-        } else if (iD == 1) {
-          return coord.y;
-        } else {
-          return coord.z;
-        }
-      };
-    } else {
-      this.getDim = function (coord, iD) {
-        return coord[iD];
-      };
-    }
-
     // fill position and barycoord buffers
-    let F = faces.size();
+    let F = faces.length;
     let positions = new Float32Array(F * 3 * 3);
     let normals = new Float32Array(F * 3 * 3);
     let barycoords = new Float32Array(F * 3 * 3);
     for (let iF = 0; iF < F; iF++) {
-      let face = faces.get(iF);
+      let face = faces[iF];
       for (let iV = 0; iV < 3; iV++) {
-        let coord = coords.get(this.getCorner(face, iV));
+        let coord = coords[face[iV]];
         for (let iD = 0; iD < 3; ++iD) {
-          positions[3 * 3 * iF + 3 * iV + iD] = this.getDim(coord, iD);
+          positions[3 * 3 * iF + 3 * iV + iD] = coord[iD];
           barycoords[3 * 3 * iF + 3 * iV + iD] = iD == iV ? 1 : 0;
         }
       }
@@ -435,10 +412,18 @@ class SurfaceMesh {
     if (localInd < this.facePickIndStart) {
       this.gp.setDataHeader(`Surface Mesh ${this.name}`, `Vertex ${localInd}`);
 
+      console.log(
+        "Vertex ",
+        localInd,
+        " position ",
+        this.coords[localInd],
+        this
+      );
+
       this.gp.clearDataFields();
       this.gp.showDataField(
         "position",
-        this.gp.prettyVector(this.coords.get(localInd))
+        this.gp.prettyVector(this.coords[localInd])
       );
 
       for (let qName in this.quantities) {
@@ -447,18 +432,21 @@ class SurfaceMesh {
           this.gp.showDataField(qName, qVal);
         }
       }
+      this.vertexPickCallback(localInd);
     } else if (localInd < this.edgePickIndStart) {
       this.gp.setDataHeader(
         `Surface Mesh ${this.name}`,
         `Face ${localInd - this.facePickIndStart}`
       );
       this.gp.clearDataFields();
+      this.facePickCallback(localInd - this.facePickIndStart);
     } else {
       this.gp.setDataHeader(
         `Surface Mesh ${this.name}`,
         `Edge ${localInd - this.edgePickIndStart}`
       );
       this.gp.clearDataFields();
+      this.edgePickCallback(localInd - this.edgePickIndStart);
     }
   }
 
@@ -469,20 +457,17 @@ class SurfaceMesh {
 
     let minmax = (a, b) => [Math.min(a, b), Math.max(a, b)];
 
-    let F = faces.size();
+    let F = faces.length;
     // count the number of vertices. Assuming they are densely indexed, this is just the max index + 1 that appears in faces
     // also index mesh edges
     let V = 0;
     this.edges = [];
     let edgeIndex = {};
     for (let iF = 0; iF < F; iF++) {
-      let face = faces.get(iF);
+      let face = faces[iF];
       for (let iV = 0; iV < 3; ++iV) {
-        V = Math.max(V, this.getCorner(face, iV) + 1);
-        let edgeHash = minmax(
-          this.getCorner(face, iV),
-          this.getCorner(face, (iV + 1) % 3)
-        );
+        V = Math.max(V, face[iV] + 1);
+        let edgeHash = minmax(face[iV], face[(iV + 1) % 3]);
         if (!(edgeHash in edgeIndex)) {
           edgeIndex[edgeHash] = this.edges.length;
           this.edges.push(edgeHash);
@@ -515,22 +500,17 @@ class SurfaceMesh {
 
     // Build all quantities in each face
     for (let iF = 0; iF < F; iF++) {
-      let face = faces.get(iF);
+      let face = faces[iF];
       let fColor = pickIndToVector(iF + faceGlobalPickIndStart);
 
-      let vColors = [0, 1, 2].map((i) =>
-        pickIndToVector(pickStart + this.getCorner(face, i))
-      );
+      let vColors = [0, 1, 2].map((i) => pickIndToVector(pickStart + face[i]));
       let eColors = [1, 2, 0].map((i) => {
-        let edgeHash = minmax(
-          this.getCorner(face, i),
-          this.getCorner(face, (i + 1) % 3)
-        );
+        let edgeHash = minmax(face[i], face[(i + 1) % 3]);
         return pickIndToVector(edgeGlobalPickIndStart + edgeIndex[edgeHash]);
       });
 
       for (let iV = 0; iV < 3; iV++) {
-        let vertex = this.getCorner(face, iV);
+        let vertex = face[iV];
 
         for (let iD = 0; iD < 3; ++iD) {
           faceColors[3 * 3 * iF + 3 * iV + iD] = fColor[iD];

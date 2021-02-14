@@ -1460,7 +1460,7 @@
   class SurfaceMesh {
     constructor(coords, faces, name, geopticEnvironment, options = {}) {
       this.gp = geopticEnvironment;
-      this.nV = coords.size();
+      this.nV = coords.length;
       this.coords = coords;
       this.faces = faces;
       this.name = name;
@@ -1484,6 +1484,10 @@
 
       this.guiFields = undefined;
       this.guiFolder = undefined;
+
+      this.vertexPickCallback = (iV) => {};
+      this.edgePickCallback = (iE) => {};
+      this.facePickCallback = (iF) => {};
     }
 
     addVertexScalarQuantity(name, values) {
@@ -1529,7 +1533,7 @@
       let vertexInfo = document.createElement("span");
       vertexInfo.innerHTML = "#verts: " + this.nV;
       let faceInfo = document.createElement("span");
-      faceInfo.innerHTML = "   #faces: " + this.faces.size();
+      faceInfo.innerHTML = "   #faces: " + this.faces.length;
       meshInfoBox.appendChild(vertexInfo);
       meshInfoBox.appendChild(faceInfo);
 
@@ -1718,7 +1722,7 @@
     computeSmoothNormals() {
       // TODO: handle non-triangular face
       let V = this.nV;
-      let F = this.faces.size();
+      let F = this.faces.length;
       let vertexNormals = new Float32Array(V * 3);
       for (let iV = 0; iV < V; ++iV) {
         vertexNormals[3 * iV + 0] = 0;
@@ -1728,9 +1732,9 @@
 
       const currNormals = this.mesh.geometry.attributes.normal.array;
       for (let iF = 0; iF < F; iF++) {
-        let face = this.faces.get(iF);
+        let face = this.faces[iF];
         for (let iV = 0; iV < 3; iV++) {
-          let v = this.getCorner(face, iV);
+          let v = face[iV];
           for (let iD = 0; iD < 3; ++iD) {
             vertexNormals[3 * v + iD] += currNormals[3 * 3 * iF + 3 * iV + iD];
           }
@@ -1751,11 +1755,10 @@
 
       let normals = new Float32Array(F * 3 * 3);
       for (let iF = 0; iF < F; iF++) {
-        let face = this.faces.get(iF);
+        let face = this.faces[iF];
         for (let iV = 0; iV < 3; iV++) {
           for (let iD = 0; iD < 3; ++iD) {
-            normals[3 * 3 * iF + 3 * iV + iD] =
-              vertexNormals[3 * this.getCorner(face, iV) + iD];
+            normals[3 * 3 * iF + 3 * iV + iD] = vertexNormals[3 * face[iV] + iD];
           }
         }
       }
@@ -1811,42 +1814,16 @@
       // create geometry object
       let threeGeometry = new THREE.BufferGeometry();
 
-      if (faces.get(0).get) {
-        this.getCorner = function (f, iV) {
-          return f.get(iV);
-        };
-      } else {
-        this.getCorner = function (f, iV) {
-          return f[iV];
-        };
-      }
-
-      if (coords.get(0).x) {
-        this.getDim = function (coord, iD) {
-          if (iD == 0) {
-            return coord.x;
-          } else if (iD == 1) {
-            return coord.y;
-          } else {
-            return coord.z;
-          }
-        };
-      } else {
-        this.getDim = function (coord, iD) {
-          return coord[iD];
-        };
-      }
-
       // fill position and barycoord buffers
-      let F = faces.size();
+      let F = faces.length;
       let positions = new Float32Array(F * 3 * 3);
       let barycoords = new Float32Array(F * 3 * 3);
       for (let iF = 0; iF < F; iF++) {
-        let face = faces.get(iF);
+        let face = faces[iF];
         for (let iV = 0; iV < 3; iV++) {
-          let coord = coords.get(this.getCorner(face, iV));
+          let coord = coords[face[iV]];
           for (let iD = 0; iD < 3; ++iD) {
-            positions[3 * 3 * iF + 3 * iV + iD] = this.getDim(coord, iD);
+            positions[3 * 3 * iF + 3 * iV + iD] = coord[iD];
             barycoords[3 * 3 * iF + 3 * iV + iD] = iD == iV ? 1 : 0;
           }
         }
@@ -1873,10 +1850,18 @@
       if (localInd < this.facePickIndStart) {
         this.gp.setDataHeader(`Surface Mesh ${this.name}`, `Vertex ${localInd}`);
 
+        console.log(
+          "Vertex ",
+          localInd,
+          " position ",
+          this.coords[localInd],
+          this
+        );
+
         this.gp.clearDataFields();
         this.gp.showDataField(
           "position",
-          this.gp.prettyVector(this.coords.get(localInd))
+          this.gp.prettyVector(this.coords[localInd])
         );
 
         for (let qName in this.quantities) {
@@ -1885,18 +1870,21 @@
             this.gp.showDataField(qName, qVal);
           }
         }
+        this.vertexPickCallback(localInd);
       } else if (localInd < this.edgePickIndStart) {
         this.gp.setDataHeader(
           `Surface Mesh ${this.name}`,
           `Face ${localInd - this.facePickIndStart}`
         );
         this.gp.clearDataFields();
+        this.facePickCallback(localInd - this.facePickIndStart);
       } else {
         this.gp.setDataHeader(
           `Surface Mesh ${this.name}`,
           `Edge ${localInd - this.edgePickIndStart}`
         );
         this.gp.clearDataFields();
+        this.edgePickCallback(localInd - this.edgePickIndStart);
       }
     }
 
@@ -1907,20 +1895,17 @@
 
       let minmax = (a, b) => [Math.min(a, b), Math.max(a, b)];
 
-      let F = faces.size();
+      let F = faces.length;
       // count the number of vertices. Assuming they are densely indexed, this is just the max index + 1 that appears in faces
       // also index mesh edges
       let V = 0;
       this.edges = [];
       let edgeIndex = {};
       for (let iF = 0; iF < F; iF++) {
-        let face = faces.get(iF);
+        let face = faces[iF];
         for (let iV = 0; iV < 3; ++iV) {
-          V = Math.max(V, this.getCorner(face, iV) + 1);
-          let edgeHash = minmax(
-            this.getCorner(face, iV),
-            this.getCorner(face, (iV + 1) % 3)
-          );
+          V = Math.max(V, face[iV] + 1);
+          let edgeHash = minmax(face[iV], face[(iV + 1) % 3]);
           if (!(edgeHash in edgeIndex)) {
             edgeIndex[edgeHash] = this.edges.length;
             this.edges.push(edgeHash);
@@ -1953,22 +1938,17 @@
 
       // Build all quantities in each face
       for (let iF = 0; iF < F; iF++) {
-        let face = faces.get(iF);
+        let face = faces[iF];
         let fColor = pickIndToVector(iF + faceGlobalPickIndStart);
 
-        let vColors = [0, 1, 2].map((i) =>
-          pickIndToVector(pickStart + this.getCorner(face, i))
-        );
+        let vColors = [0, 1, 2].map((i) => pickIndToVector(pickStart + face[i]));
         let eColors = [1, 2, 0].map((i) => {
-          let edgeHash = minmax(
-            this.getCorner(face, i),
-            this.getCorner(face, (i + 1) % 3)
-          );
+          let edgeHash = minmax(face[i], face[(i + 1) % 3]);
           return pickIndToVector(edgeGlobalPickIndStart + edgeIndex[edgeHash]);
         });
 
         for (let iV = 0; iV < 3; iV++) {
-          this.getCorner(face, iV);
+          face[iV];
 
           for (let iD = 0; iD < 3; ++iD) {
             faceColors[3 * 3 * iF + 3 * iV + iD] = fColor[iD];
@@ -2018,7 +1998,7 @@
   class PointCloud {
     constructor(coords, name, geopticEnvironment, options = {}) {
       this.gp = geopticEnvironment;
-      this.nV = coords.size();
+      this.nV = coords.length;
       this.coords = coords;
       this.name = name;
       this.enabled = true;
@@ -2180,7 +2160,7 @@
       let mat = new THREE.Matrix4();
       new Float32Array(3 * this.nV);
       for (let iV = 0; iV < this.nV; iV++) {
-        let pos = coords.get(iV);
+        let pos = coords[iV];
         mat.setPosition(pos[0], pos[1], pos[2]);
         threeMesh.setMatrixAt(iV, mat);
       }
@@ -2751,29 +2731,129 @@
       this.scene.add(this.camera);
     }
 
-    standardizeDataArray(arr) {
-      if (!arr.size && arr.length) {
-        arr.size = function () {
-          return arr.length;
-        };
+    standardizePositionArray(positionArray) {
+      let get = undefined;
+      if (positionArray.get) {
+        get = (iV) => positionArray.get(iV);
+      } else {
+        get = (iV) => positionArray[iV];
       }
-      if (!arr.get && arr[0]) {
-        arr.get = function (i) {
-          return arr[i];
+
+      let getDim = undefined;
+      if (get(0).x) {
+        getDim = function (coord, iD) {
+          if (iD == 0) {
+            return coord.x;
+          } else if (iD == 1) {
+            return coord.y;
+          } else {
+            return coord.z;
+          }
         };
+      } else {
+        getDim = (coord, iD) => coord[iD];
       }
+
+      let size = undefined;
+      if (positionArray.size) {
+        size = positionArray.size();
+      } else {
+        size = positionArray.length;
+      }
+
+      const standardizedPositions = [];
+      let pos = undefined;
+      for (let iV = 0; iV < size; iV++) {
+        pos = get(iV);
+        standardizedPositions.push([
+          getDim(pos, 0),
+          getDim(pos, 1),
+          getDim(pos, 2),
+        ]);
+      }
+      return standardizedPositions;
+    }
+
+    standardizeFaceArray(faceArray) {
+      let get = undefined;
+      let flatTris = false;
+      if (faceArray.get) {
+        // if faceArray is a single list, we assume that all faces are
+        // triangles (this is the geometry-processing-js convention)
+        if (
+          typeof faceArray.get(0) == "number" ||
+          typeof faceArray.get(0) == "bigint"
+        ) {
+          flatTris = true;
+          get = (iV) => [
+            faceArray.get(3 * iV),
+            faceArray.get(3 * iV + 1),
+            faceArray.get(3 * iV + 2),
+          ];
+        } else if (faceArray.get(0).get) {
+          get = (iV) => [
+            faceArray.get(iV).get(0),
+            faceArray.get(iV).get(1),
+            faceArray.get(iV).get(2),
+          ];
+        } else {
+          get = (iV) => faceArray.get(iV);
+        }
+      } else {
+        // if faceArray is a single list, we assume that all faces are
+        // triangles (this is the geometry-processing-js convention)
+        if (typeof faceArray[0] == "number" || typeof faceArray[0] == "bigint") {
+          flatTris = true;
+          get = (iV) => [
+            faceArray[3 * iV],
+            faceArray[3 * iV + 1],
+            faceArray[3 * iV + 2],
+          ];
+        } else {
+          // for now, I'll assume that nobody would make a list of things that have a get function
+          get = (iV) => faceArray[iV];
+        }
+      }
+
+      let size = undefined;
+      if (faceArray.size) {
+        size = faceArray.size();
+      } else {
+        size = faceArray.length;
+      }
+      if (flatTris) size /= 3;
+
+      const standardizedFaces = [];
+      for (let iF = 0; iF < size; iF++) {
+        standardizedFaces.push([get(iF)[0], get(iF)[1], get(iF)[2]]);
+      }
+      return standardizedFaces;
     }
 
     registerSurfaceMesh(name, vertexCoordinates, faces, scale = 1) {
-      this.standardizeDataArray(vertexCoordinates);
-      this.standardizeDataArray(faces);
+      vertexCoordinates = this.standardizePositionArray(vertexCoordinates);
+      faces = this.standardizeFaceArray(faces);
 
       if (!this.structureGuiMeshes) {
         this.structureGuiMeshes = this.structureGui.addFolder("Surface Meshes");
         this.structureGuiMeshes.open();
       }
 
-      let meshStructure = new SurfaceMesh(vertexCoordinates, faces, name, this);
+      // If there's an existing strucure with this name,
+      // copy its properties and delete it
+      const options = {};
+      if (this.surfaceMeshes[name]) {
+        options.color = this.surfaceMeshes[name].getColor();
+        this.deregisterSurfaceMesh(name);
+      }
+
+      let meshStructure = new SurfaceMesh(
+        vertexCoordinates,
+        faces,
+        name,
+        this,
+        options
+      );
       this.surfaceMeshes[name] = meshStructure;
 
       let meshGui = this.structureGuiMeshes.addFolder(name);
@@ -2795,12 +2875,15 @@
     }
 
     registerCurveNetwork(name, vertexCoordinates, edges) {
-      this.standardizeDataArray(vertexCoordinates);
+      vertexCoordinates = this.standardizePositionArray(vertexCoordinates);
+
       if (!this.structureGuiCurveNetworks) {
         this.structureGuiCurveNetworks = this.structureGui.addFolder(
           "Curve Networks"
         );
         this.structureGuiCurveNetworks.open();
+      } else {
+        edges = this.standardizeFaceArray(edges);
       }
 
       if (!edges) {
@@ -2813,12 +2896,21 @@
       // TODO: allocate extra space?
       let maxLen = vertexCoordinates.length;
 
+      // If there's an existing strucure with this name,
+      // copy its properties and delete it
+      const options = {};
+      if (this.curveNetworks[name]) {
+        options.color = this.curveNetworks[name].getColor();
+        this.deregisterCurveNetwork(name);
+      }
+
       let curveStructure = new CurveNetwork(
         vertexCoordinates,
         edges,
         maxLen,
         name,
-        this
+        this,
+        options
       );
       this.curveNetworks[name] = curveStructure;
 
@@ -2831,15 +2923,23 @@
     }
 
     registerPointCloud(name, vertexCoordinates) {
-      this.standardizeDataArray(vertexCoordinates);
-      if (!this.structureGuiPointCluods) {
+      vertexCoordinates = this.standardizePositionArray(vertexCoordinates);
+      if (!this.structureGuiPointClouds) {
         this.structureGuiPointClouds = this.structureGui.addFolder(
           "Point Clouds"
         );
         this.structureGuiPointClouds.open();
       }
 
-      let cloudStructure = new PointCloud(vertexCoordinates, name, this);
+      // If there's an existing strucure with this name,
+      // copy its properties and delete it
+      const options = {};
+      if (this.pointClouds[name]) {
+        options.color = this.pointClouds[name].getColor();
+        this.deregisterPointCloud(name);
+      }
+
+      let cloudStructure = new PointCloud(vertexCoordinates, name, this, options);
       this.pointClouds[name] = cloudStructure;
 
       let cloudGui = this.structureGuiPointClouds.addFolder(name);
@@ -2867,6 +2967,15 @@
       this.curveNetworks[name].remove();
       this.scene.remove(this.curveNetworks[name].mesh);
       delete this.curveNetworks[name];
+    }
+
+    deregisterPointCloud(name) {
+      if (!(name in this.pointClouds)) return;
+
+      this.structureGuiPointClouds.removeFolder(name);
+      this.pointClouds[name].remove();
+      this.scene.remove(this.pointClouds[name].mesh);
+      delete this.pointClouds[name];
     }
 
     clearAllStructures() {

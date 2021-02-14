@@ -310,22 +310,109 @@ class Geoptic {
     this.scene.add(this.camera);
   }
 
-  standardizeDataArray(arr) {
-    if (!arr.size && arr.length) {
-      arr.size = function () {
-        return arr.length;
-      };
+  standardizePositionArray(positionArray) {
+    let get = undefined;
+    if (positionArray.get) {
+      get = (iV) => positionArray.get(iV);
+    } else {
+      get = (iV) => positionArray[iV];
     }
-    if (!arr.get && arr[0]) {
-      arr.get = function (i) {
-        return arr[i];
+
+    let getDim = undefined;
+    if (get(0).x) {
+      getDim = function (coord, iD) {
+        if (iD == 0) {
+          return coord.x;
+        } else if (iD == 1) {
+          return coord.y;
+        } else {
+          return coord.z;
+        }
       };
+    } else {
+      getDim = (coord, iD) => coord[iD];
     }
+
+    let size = undefined;
+    if (positionArray.size) {
+      size = positionArray.size();
+    } else {
+      size = positionArray.length;
+    }
+
+    const standardizedPositions = [];
+    let pos = undefined;
+    for (let iV = 0; iV < size; iV++) {
+      pos = get(iV);
+      standardizedPositions.push([
+        getDim(pos, 0),
+        getDim(pos, 1),
+        getDim(pos, 2),
+      ]);
+    }
+    return standardizedPositions;
+  }
+
+  standardizeFaceArray(faceArray) {
+    let get = undefined;
+    let flatTris = false;
+    if (faceArray.get) {
+      // if faceArray is a single list, we assume that all faces are
+      // triangles (this is the geometry-processing-js convention)
+      if (
+        typeof faceArray.get(0) == "number" ||
+        typeof faceArray.get(0) == "bigint"
+      ) {
+        flatTris = true;
+        get = (iV) => [
+          faceArray.get(3 * iV),
+          faceArray.get(3 * iV + 1),
+          faceArray.get(3 * iV + 2),
+        ];
+      } else if (faceArray.get(0).get) {
+        get = (iV) => [
+          faceArray.get(iV).get(0),
+          faceArray.get(iV).get(1),
+          faceArray.get(iV).get(2),
+        ];
+      } else {
+        get = (iV) => faceArray.get(iV);
+      }
+    } else {
+      // if faceArray is a single list, we assume that all faces are
+      // triangles (this is the geometry-processing-js convention)
+      if (typeof faceArray[0] == "number" || typeof faceArray[0] == "bigint") {
+        flatTris = true;
+        get = (iV) => [
+          faceArray[3 * iV],
+          faceArray[3 * iV + 1],
+          faceArray[3 * iV + 2],
+        ];
+      } else {
+        // for now, I'll assume that nobody would make a list of things that have a get function
+        get = (iV) => faceArray[iV];
+      }
+    }
+
+    let size = undefined;
+    if (faceArray.size) {
+      size = faceArray.size();
+    } else {
+      size = faceArray.length;
+    }
+    if (flatTris) size /= 3;
+
+    const standardizedFaces = [];
+    let face = undefined;
+    for (let iF = 0; iF < size; iF++) {
+      standardizedFaces.push([get(iF)[0], get(iF)[1], get(iF)[2]]);
+    }
+    return standardizedFaces;
   }
 
   registerSurfaceMesh(name, vertexCoordinates, faces, scale = 1) {
-    this.standardizeDataArray(vertexCoordinates);
-    this.standardizeDataArray(faces);
+    vertexCoordinates = this.standardizePositionArray(vertexCoordinates);
+    faces = this.standardizeFaceArray(faces);
 
     if (!this.structureGuiMeshes) {
       this.structureGuiMeshes = this.structureGui.addFolder("Surface Meshes");
@@ -368,12 +455,15 @@ class Geoptic {
   }
 
   registerCurveNetwork(name, vertexCoordinates, edges) {
-    this.standardizeDataArray(vertexCoordinates);
+    vertexCoordinates = this.standardizePositionArray(vertexCoordinates);
+
     if (!this.structureGuiCurveNetworks) {
       this.structureGuiCurveNetworks = this.structureGui.addFolder(
         "Curve Networks"
       );
       this.structureGuiCurveNetworks.open();
+    } else {
+      edges = this.standardizeFaceArray(edges);
     }
 
     if (!edges) {
@@ -413,7 +503,7 @@ class Geoptic {
   }
 
   registerPointCloud(name, vertexCoordinates) {
-    this.standardizeDataArray(vertexCoordinates);
+    vertexCoordinates = this.standardizePositionArray(vertexCoordinates);
     if (!this.structureGuiPointClouds) {
       this.structureGuiPointClouds = this.structureGui.addFolder(
         "Point Clouds"

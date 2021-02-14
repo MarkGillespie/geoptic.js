@@ -20,7 +20,7 @@ import { PointCloudScalarQuantity } from "./scalar_quantity.js";
 class PointCloud {
   constructor(coords, name, geopticEnvironment, options = {}) {
     this.gp = geopticEnvironment;
-    this.nV = coords.size();
+    this.nV = coords.length;
     this.coords = coords;
     this.name = name;
     this.enabled = true;
@@ -182,7 +182,7 @@ class PointCloud {
     let mat = new Matrix4();
     let positions = new Float32Array(3 * this.nV);
     for (let iV = 0; iV < this.nV; iV++) {
-      let pos = coords.get(iV);
+      let pos = coords[iV];
       mat.setPosition(pos[0], pos[1], pos[2]);
       threeMesh.setMatrixAt(iV, mat);
     }
