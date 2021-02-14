@@ -332,7 +332,21 @@ class Geoptic {
       this.structureGuiMeshes.open();
     }
 
-    let meshStructure = new SurfaceMesh(vertexCoordinates, faces, name, this);
+    // If there's an existing strucure with this name,
+    // copy its properties and delete it
+    const options = {};
+    if (this.surfaceMeshes[name]) {
+      options.color = this.surfaceMeshes[name].getColor();
+      this.deregisterSurfaceMesh(name);
+    }
+
+    let meshStructure = new SurfaceMesh(
+      vertexCoordinates,
+      faces,
+      name,
+      this,
+      options
+    );
     this.surfaceMeshes[name] = meshStructure;
 
     let meshGui = this.structureGuiMeshes.addFolder(name);
@@ -372,12 +386,21 @@ class Geoptic {
     // TODO: allocate extra space?
     let maxLen = vertexCoordinates.length;
 
+    // If there's an existing strucure with this name,
+    // copy its properties and delete it
+    const options = {};
+    if (this.curveNetworks[name]) {
+      options.color = this.curveNetworks[name].getColor();
+      this.deregisterCurveNetwork(name);
+    }
+
     let curveStructure = new CurveNetwork(
       vertexCoordinates,
       edges,
       maxLen,
       name,
-      this
+      this,
+      options
     );
     this.curveNetworks[name] = curveStructure;
 
@@ -391,14 +414,22 @@ class Geoptic {
 
   registerPointCloud(name, vertexCoordinates) {
     this.standardizeDataArray(vertexCoordinates);
-    if (!this.structureGuiPointCluods) {
+    if (!this.structureGuiPointClouds) {
       this.structureGuiPointClouds = this.structureGui.addFolder(
         "Point Clouds"
       );
       this.structureGuiPointClouds.open();
     }
 
-    let cloudStructure = new PointCloud(vertexCoordinates, name, this);
+    // If there's an existing strucure with this name,
+    // copy its properties and delete it
+    const options = {};
+    if (this.pointClouds[name]) {
+      options.color = this.pointClouds[name].getColor();
+      this.deregisterPointCloud(name);
+    }
+
+    let cloudStructure = new PointCloud(vertexCoordinates, name, this, options);
     this.pointClouds[name] = cloudStructure;
 
     let cloudGui = this.structureGuiPointClouds.addFolder(name);
@@ -426,6 +457,15 @@ class Geoptic {
     this.curveNetworks[name].remove();
     this.scene.remove(this.curveNetworks[name].mesh);
     delete this.curveNetworks[name];
+  }
+
+  deregisterPointCloud(name) {
+    if (!(name in this.pointClouds)) return;
+
+    this.structureGuiPointClouds.removeFolder(name);
+    this.pointClouds[name].remove();
+    this.scene.remove(this.pointClouds[name].mesh);
+    delete this.pointClouds[name];
   }
 
   clearAllStructures() {
