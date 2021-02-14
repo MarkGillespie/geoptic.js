@@ -1458,13 +1458,15 @@
   }
 
   class SurfaceMesh {
-    constructor(coords, faces, name, geopticEnvironment) {
+    constructor(coords, faces, name, geopticEnvironment, options = {}) {
       this.gp = geopticEnvironment;
       this.nV = coords.size();
       this.coords = coords;
       this.faces = faces;
       this.name = name;
       this.enabled = true;
+
+      this.color = options.color || getNextUniqueColor();
 
       // build three.js mesh
       [this.mesh, this.geo] = this.constructThreeMesh(coords, faces);
@@ -1567,7 +1569,7 @@
       row.classList.add("half-button");
       row.style.width = "30%";
 
-      guiFields[this.name + "#Color"] = getNextUniqueColor();
+      guiFields[this.name + "#Color"] = this.color;
       this.setColor(guiFields[this.name + "#Color"]);
       guiFolder
         .addColor(guiFields, this.name + "#Color")
@@ -1640,8 +1642,13 @@
     }
 
     setColor(color) {
+      this.color = color;
       let c = new THREE.Vector3(color[0] / 255, color[1] / 255, color[2] / 255);
       this.mesh.material.uniforms.color.value = c;
+    }
+
+    getColor() {
+      return this.color;
     }
 
     setEdgeColor(color) {
@@ -2009,12 +2016,13 @@
   }
 
   class PointCloud {
-    constructor(coords, name, geopticEnvironment) {
+    constructor(coords, name, geopticEnvironment, options = {}) {
       this.gp = geopticEnvironment;
       this.nV = coords.size();
       this.coords = coords;
       this.name = name;
       this.enabled = true;
+      this.color = options.color || getNextUniqueColor();
 
       // build three.js mesh
       this.mesh = this.constructThreeMesh(coords);
@@ -2054,7 +2062,7 @@
         .listen()
         .name("Enabled");
 
-      guiFields[this.name + "#Color"] = getNextUniqueColor();
+      guiFields[this.name + "#Color"] = this.color;
       this.setColor(guiFields[this.name + "#Color"]);
       guiFolder
         .addColor(guiFields, this.name + "#Color")
@@ -2081,8 +2089,13 @@
     }
 
     setColor(color) {
+      this.color = color;
       let c = new THREE.Vector3(color[0] / 255, color[1] / 255, color[2] / 255);
       this.mesh.material.uniforms.color.value = c;
+    }
+
+    getColor() {
+      return this.color;
     }
 
     setRadius(rad) {
@@ -2235,9 +2248,17 @@
   }
 
   class CurveNetwork {
-    constructor(vertices, segments, maxLen, name, geopticEnvironment) {
+    constructor(
+      vertices,
+      segments,
+      maxLen,
+      name,
+      geopticEnvironment,
+      options = {}
+    ) {
       this.gp = geopticEnvironment;
       this.res = 12;
+      this.color = options.color || getNextUniqueColor();
 
       [
         this.mesh,
@@ -2294,9 +2315,14 @@
     }
 
     setColor(color) {
+      this.color = color;
       let c = new THREE.Vector3(color[0] / 255, color[1] / 255, color[2] / 255);
       this.tubeMesh.material.uniforms.color.value = c;
       this.pointMesh.material.uniforms.color.value = c;
+    }
+
+    getColor() {
+      return this.color;
     }
 
     setEdgeWidth(width) {
@@ -2328,7 +2354,7 @@
         .listen()
         .name("Enabled");
 
-      guiFields[this.name + "#Color"] = getNextUniqueColor();
+      guiFields[this.name + "#Color"] = this.color;
       this.setColor(guiFields[this.name + "#Color"]);
       guiFolder
         .addColor(guiFields, this.name + "#Color")

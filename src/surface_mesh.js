@@ -19,13 +19,15 @@ import { VertexVectorQuantity } from "./vector_quantity.js";
 import { VertexParameterizationQuantity } from "./parameterization_quantity.js";
 
 class SurfaceMesh {
-  constructor(coords, faces, name, geopticEnvironment) {
+  constructor(coords, faces, name, geopticEnvironment, options = {}) {
     this.gp = geopticEnvironment;
     this.nV = coords.size();
     this.coords = coords;
     this.faces = faces;
     this.name = name;
     this.enabled = true;
+
+    this.color = options.color || getNextUniqueColor();
 
     // build three.js mesh
     [this.mesh, this.geo] = this.constructThreeMesh(coords, faces);
@@ -128,7 +130,7 @@ class SurfaceMesh {
     row.classList.add("half-button");
     row.style.width = "30%";
 
-    guiFields[this.name + "#Color"] = getNextUniqueColor();
+    guiFields[this.name + "#Color"] = this.color;
     this.setColor(guiFields[this.name + "#Color"]);
     const colorButton = guiFolder
       .addColor(guiFields, this.name + "#Color")
@@ -201,8 +203,13 @@ class SurfaceMesh {
   }
 
   setColor(color) {
+    this.color = color;
     let c = new Vector3(color[0] / 255, color[1] / 255, color[2] / 255);
     this.mesh.material.uniforms.color.value = c;
+  }
+
+  getColor() {
+    return this.color;
   }
 
   setEdgeColor(color) {

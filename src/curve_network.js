@@ -16,9 +16,17 @@ import {
 import { getNextUniqueColor } from "./color_utils.js";
 
 class CurveNetwork {
-  constructor(vertices, segments, maxLen, name, geopticEnvironment) {
+  constructor(
+    vertices,
+    segments,
+    maxLen,
+    name,
+    geopticEnvironment,
+    options = {}
+  ) {
     this.gp = geopticEnvironment;
     this.res = 12;
+    this.color = options.color || getNextUniqueColor();
 
     [
       this.mesh,
@@ -75,9 +83,14 @@ class CurveNetwork {
   }
 
   setColor(color) {
+    this.color = color;
     let c = new Vector3(color[0] / 255, color[1] / 255, color[2] / 255);
     this.tubeMesh.material.uniforms.color.value = c;
     this.pointMesh.material.uniforms.color.value = c;
+  }
+
+  getColor() {
+    return this.color;
   }
 
   setEdgeWidth(width) {
@@ -109,7 +122,7 @@ class CurveNetwork {
       .listen()
       .name("Enabled");
 
-    guiFields[this.name + "#Color"] = getNextUniqueColor();
+    guiFields[this.name + "#Color"] = this.color;
     this.setColor(guiFields[this.name + "#Color"]);
     guiFolder
       .addColor(guiFields, this.name + "#Color")

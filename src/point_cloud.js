@@ -18,12 +18,13 @@ import { getNextUniqueColor } from "./color_utils.js";
 import { PointCloudScalarQuantity } from "./scalar_quantity.js";
 
 class PointCloud {
-  constructor(coords, name, geopticEnvironment) {
+  constructor(coords, name, geopticEnvironment, options = {}) {
     this.gp = geopticEnvironment;
     this.nV = coords.size();
     this.coords = coords;
     this.name = name;
     this.enabled = true;
+    this.color = options.color || getNextUniqueColor();
 
     // build three.js mesh
     this.mesh = this.constructThreeMesh(coords);
@@ -63,7 +64,7 @@ class PointCloud {
       .listen()
       .name("Enabled");
 
-    guiFields[this.name + "#Color"] = getNextUniqueColor();
+    guiFields[this.name + "#Color"] = this.color;
     this.setColor(guiFields[this.name + "#Color"]);
     guiFolder
       .addColor(guiFields, this.name + "#Color")
@@ -90,8 +91,13 @@ class PointCloud {
   }
 
   setColor(color) {
+    this.color = color;
     let c = new Vector3(color[0] / 255, color[1] / 255, color[2] / 255);
     this.mesh.material.uniforms.color.value = c;
+  }
+
+  getColor() {
+    return this.color;
   }
 
   setRadius(rad) {
