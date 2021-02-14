@@ -196,7 +196,7 @@ class PointCloud {
     this.gp.clearDataFields();
     this.gp.showDataField(
       "position",
-      this.gp.prettyVector(this.coords.get(localInd))
+      this.gp.prettyVector(this.coords[localInd])
     );
 
     for (let qName in this.quantities) {

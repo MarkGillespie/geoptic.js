@@ -73,18 +73,7 @@ class VertexScalarQuantity {
     guiFields[this.prefix + "#ColorMap"] = "viridis";
     this.applyColorMap(guiFields[this.prefix + "#ColorMap"]);
     guiFolder
-      .add(
-        guiFields,
-        this.prefix + "#ColorMap",
-        availableColorMaps
-        //        [
-        // "viridis",
-        // "coolwarm",
-        // "plasma",
-        // "magma",
-        // "inferno",
-        //        ]
-      )
+      .add(guiFields, this.prefix + "#ColorMap", availableColorMaps)
       .onChange((cm) => {
         this.applyColorMap(cm);
       })
@@ -108,7 +97,7 @@ class VertexScalarQuantity {
   }
 
   initializeColorMap() {
-    let F = this.parent.faces.size();
+    let F = this.parent.faces.length;
     let colors = new Float32Array(F * 3 * 3);
     this.mesh.geometry.setAttribute("color", new BufferAttribute(colors, 3));
   }
@@ -117,11 +106,11 @@ class VertexScalarQuantity {
     // update color buffer
     const colors = this.mesh.geometry.attributes.color.array;
 
-    let F = this.parent.faces.size();
+    let F = this.parent.faces.length;
     for (let iF = 0; iF < F; iF++) {
-      let face = this.parent.faces.get(iF);
+      let face = this.parent.faces[iF];
       for (let iV = 0; iV < 3; iV++) {
-        let value = this.values[this.parent.getCorner(face, iV)];
+        let value = this.values[face[iV]];
         let color = applyColorMap(cm, value, this.dataMin, this.dataMax);
 
         colors[3 * 3 * iF + 3 * iV + 0] = color.r;
