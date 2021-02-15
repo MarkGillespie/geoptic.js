@@ -3322,8 +3322,24 @@ class Geoptic {
     message.innerHTML = str;
   }
 
+  startLoading() {
+    console.log("start loading!");
+    document.getElementById("spinner").style.display = "inline-block";
+  }
+
   doneLoading() {
     document.getElementById("spinner").style.display = "none";
+  }
+
+  slowFunction(f) {
+    this.startLoading();
+    setTimeout(
+      function () {
+        f();
+        this.doneLoading();
+      }.bind(this),
+      1
+    );
   }
 
   prettyScalar(d) {
