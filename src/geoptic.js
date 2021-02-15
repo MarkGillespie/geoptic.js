@@ -356,7 +356,7 @@ class Geoptic {
     // copy its properties and delete it
     const options = {};
     if (this.surfaceMeshes[name]) {
-      options.color = this.surfaceMeshes[name].getColor();
+      options = this.surfaceMeshes[name].getOptions();
       this.deregisterSurfaceMesh(name);
     }
 
@@ -446,9 +446,10 @@ class Geoptic {
 
     // If there's an existing strucure with this name,
     // copy its properties and delete it
-    const options = {};
+    const options = this.pointClouds[name]
+      ? this.pointClouds[name].getOptions()
+      : {};
     if (this.pointClouds[name]) {
-      options.color = this.pointClouds[name].getColor();
       this.deregisterPointCloud(name);
     }
 
@@ -456,7 +457,7 @@ class Geoptic {
     this.pointClouds[name] = cloudStructure;
 
     let cloudGui = this.structureGuiPointClouds.addFolder(name);
-    cloudStructure.initGui(this.structureGuiFields, cloudGui);
+    cloudStructure.initGui(cloudGui);
 
     this.scene.add(cloudStructure.mesh);
     if (this.doPicks) this.pickScene.add(cloudStructure.pickMesh);

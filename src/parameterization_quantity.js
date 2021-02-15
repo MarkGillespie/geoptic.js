@@ -13,7 +13,7 @@ import { VertexParamCheckerboard, VertexParamGrid } from "./shaders.js";
 import { applyColorMap } from "./color_maps.js";
 
 class VertexParameterizationQuantity {
-  constructor(name, coords, parentMesh) {
+  constructor(name, coords, parentMesh, options = {}) {
     this.parent = parentMesh;
     this.gp = this.parent.gp;
     this.coords = coords;
@@ -39,55 +39,53 @@ class VertexParameterizationQuantity {
     this.mesh.geometry.attributes.normal = this.parent.mesh.geometry.attributes.normal;
     this.mesh.material.uniforms.edgeWidth = this.parent.mesh.material.uniforms.edgeWidth;
     this.mesh.material.uniforms.edgeColor = this.parent.mesh.material.uniforms.edgeColor;
+
+    this.options = {
+      enabled: false,
+      style: "checker",
+      color1: [249, 45, 94],
+      color2: [249, 219, 225],
+      scale: 1,
+    };
+    Object.assign(this.options, options);
+    this.setOptions(this.options);
   }
 
-  initGui(guiFields, guiFolder) {
-    this.prefix = this.parent.name + "#" + this.name;
-    this.guiFields = guiFields;
-
-    guiFields[this.prefix + "#Enabled"] = false;
+  initGui(guiFolder) {
     guiFolder
-      .add(guiFields, this.prefix + "#Enabled")
+      .add(this.options, "enabled")
       .onChange((e) => {
         this.setEnabled(e);
       })
       .listen()
       .name("Enabled");
 
-    guiFields[this.prefix + "#Style"] = "checker";
-    // this.applyStyle(guiFields[this.prefix + "#Style"]);
     guiFolder
-      .add(guiFields, this.prefix + "#Style", ["checker", "grid"])
+      .add(this.options, "style", ["checker", "grid"])
       .onChange((s) => {
-        this.applyStyle(s);
+        this.setStyle(s);
       })
       .listen()
       .name("Color Map");
 
-    guiFields[this.name + "#Color1"] = [249, 45, 94];
-    this.setColor1(guiFields[this.name + "#Color1"]);
     const color1Button = guiFolder
-      .addColor(guiFields, this.name + "#Color1")
+      .addColor(this.options, "color1")
       .onChange((c) => {
         this.setColor1(c);
       })
       .listen()
       .name("Color");
 
-    guiFields[this.name + "#Color2"] = [249, 219, 225];
-    this.setColor2(guiFields[this.name + "#Color2"]);
     const color2Button = guiFolder
-      .addColor(guiFields, this.name + "#Color2")
+      .addColor(this.options, "color2")
       .onChange((c) => {
         this.setColor2(c);
       })
       .listen()
       .name("Color");
 
-    guiFields[this.name + "#Scale"] = 1;
-    this.setScale(guiFields[this.name + "#Scale"]);
     const edgeWidthInput = guiFolder
-      .add(guiFields, this.name + "#Scale")
+      .add(this.options, "scale")
       .min(0)
       .max(2)
       .step(0.05)
@@ -99,22 +97,24 @@ class VertexParameterizationQuantity {
   }
 
   setScale(scale) {
+    this.options.scale = scale;
     this.mesh.material.uniforms.paramScale.value = scale / 10;
   }
 
   setColor1(color) {
+    this.options.color1 = color;
     let c = new Vector3(color[0] / 255, color[1] / 255, color[2] / 255);
     this.mesh.material.uniforms.color1.value = c;
   }
 
   setColor2(color) {
+    this.options.color2 = color;
     let c = new Vector3(color[0] / 255, color[1] / 255, color[2] / 255);
     this.mesh.material.uniforms.color2.value = c;
   }
 
   setEnabled(enabled) {
-    this.guiFields[this.prefix + "#Enabled"] = enabled;
-    this.enabled = enabled;
+    this.options.enabled = enabled;
     if (enabled) {
       this.parent.enableQuantity(this);
     } else {
@@ -122,7 +122,8 @@ class VertexParameterizationQuantity {
     }
   }
 
-  applyStyle(style) {
+  setStyle(style) {
+    this.options.style = style;
     if (style == "checker") {
       this.mesh.material = VertexParamCheckerboard(
         this.gp.matcapTextures.r,
@@ -139,13 +140,40 @@ class VertexParameterizationQuantity {
       );
     }
     // Reset material uniforms
-    this.setColor1(this.guiFields[this.name + "#Color1"]);
-    this.setColor2(this.guiFields[this.name + "#Color2"]);
-    this.setScale(this.guiFields[this.name + "#Scale"]);
+    this.setColor1(this.options.color1);
+    this.setColor2(this.options.color2);
+    this.setScale(this.options.scale);
 
     // Copy some attributes from parent
     this.mesh.material.uniforms.edgeWidth = this.parent.mesh.material.uniforms.edgeWidth;
     this.mesh.material.uniforms.edgeColor = this.parent.mesh.material.uniforms.edgeColor;
+  }
+
+  // enabled: false,
+  // style: "checker",
+  // color1: [249, 45, 94],
+  // color2: [249, 219, 225],
+  // scale: 1,
+  setOptions(options) {
+    if (options.hasOwnProperty("style")) {
+      this.setStyle(options.style);
+    }
+    if (options.hasOwnProperty("color1")) {
+      this.setColor1(options.color1);
+    }
+    if (options.hasOwnProperty("color2")) {
+      this.setColor2(options.color2);
+    }
+    if (options.hasOwnProperty("style")) {
+      this.setStyle(options.style);
+    }
+    if (options.hasOwnProperty("enabled")) {
+      this.setEnabled(options.enabled);
+    }
+  }
+
+  getOptions() {
+    return this.options;
   }
 
   initParam(coords) {

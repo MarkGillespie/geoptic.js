@@ -25,7 +25,7 @@ function computeMinMax(values) {
 }
 
 class VertexDistanceQuantity {
-  constructor(name, values, parentMesh) {
+  constructor(name, values, parentMesh, options = {}) {
     this.parent = parentMesh;
     this.gp = this.parent.gp;
     this.values = values;
@@ -51,6 +51,15 @@ class VertexDistanceQuantity {
     );
     this.initializeDistances(this.values);
 
+    this.options = {
+      enabled: false,
+      stripes: 20,
+      offset: 0.2,
+      colormap: "rdpu",
+    };
+    Object.assign(this.options, options);
+    this.setOptions(this.options);
+
     // Copy some attributes from parent
     this.mesh.geometry.attributes.position = this.parent.mesh.geometry.attributes.position;
     this.mesh.geometry.attributes.normal = this.parent.mesh.geometry.attributes.normal;
@@ -58,23 +67,19 @@ class VertexDistanceQuantity {
     this.mesh.material.uniforms.edgeColor = this.parent.mesh.material.uniforms.edgeColor;
   }
 
-  initGui(guiFields, guiFolder) {
+  initGui(guiFolder) {
     this.prefix = this.parent.name + "#" + this.name;
-    this.guiFields = guiFields;
 
-    guiFields[this.prefix + "#Enabled"] = false;
     guiFolder
-      .add(guiFields, this.prefix + "#Enabled")
+      .add(this.options, "enabled")
       .onChange((e) => {
         this.setEnabled(e);
       })
       .listen()
       .name("Enabled");
 
-    guiFields[this.name + "#Stripes"] = 20;
-    this.setStripes(guiFields[this.name + "#Stripes"]);
     guiFolder
-      .add(guiFields, this.name + "#Stripes")
+      .add(this.options, "stripes")
       .min(0)
       .max(50)
       .step(0.5)
@@ -84,10 +89,8 @@ class VertexDistanceQuantity {
       .listen()
       .name("Stripes");
 
-    guiFields[this.name + "#Offset"] = 0.2;
-    this.setOffset(guiFields[this.name + "#Offset"]);
     guiFolder
-      .add(guiFields, this.name + "#Offset")
+      .add(this.options, "offset")
       .min(0)
       .max(0.5)
       .step(0.05)
@@ -97,10 +100,8 @@ class VertexDistanceQuantity {
       .listen()
       .name("Offset");
 
-    guiFields[this.prefix + "#ColorMap"] = "rdpu";
-    this.applyColorMap(guiFields[this.prefix + "#ColorMap"]);
     guiFolder
-      .add(guiFields, this.prefix + "#ColorMap", availableColorMaps)
+      .add(this.options, "colormap", availableColorMaps)
       .onChange((cm) => {
         this.applyColorMap(cm);
       })
@@ -108,8 +109,27 @@ class VertexDistanceQuantity {
       .name("Color Map");
   }
 
+  getOptions() {
+    return this.options;
+  }
+
+  setOptions(options) {
+    if (options.hasOwnProperty("colormap")) {
+      this.setColorMap(options.colormap);
+    }
+    if (options.hasOwnProperty("stripes")) {
+      this.setStripes(options.stripes);
+    }
+    if (options.hasOwnProperty("offset")) {
+      this.setOffset(options.offset);
+    }
+    if (options.hasOwnProperty("enabled")) {
+      this.setEnabled(options.enabled);
+    }
+  }
+
   setEnabled(enabled) {
-    this.guiFields[this.prefix + "#Enabled"] = enabled;
+    this.options.enabled = enabled;
     this.enabled = enabled;
     if (enabled) {
       this.parent.enableQuantity(this);
@@ -119,15 +139,17 @@ class VertexDistanceQuantity {
   }
 
   setColorMap(cm) {
-    this.guiFields[this.prefix + "#ColorMap"] = cm;
+    this.options.colormap = cm;
     this.applyColorMap(cm);
   }
 
   setStripes(stripes) {
+    this.options.stripes = stripes;
     this.mesh.material.uniforms.scale.value = stripes;
   }
 
   setOffset(offset) {
+    this.options.offset = offset;
     this.mesh.material.uniforms.offset.value = offset;
   }
 

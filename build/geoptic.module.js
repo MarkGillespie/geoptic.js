@@ -940,12 +940,15 @@ function computeMinMax(values) {
 }
 
 class VertexScalarQuantity {
-  constructor(name, values, parentMesh) {
+  constructor(name, values, parentMesh, options = {}) {
     this.parent = parentMesh;
     this.gp = this.parent.gp;
     this.values = values;
     this.name = name;
-    this.enabled = false;
+
+    this.options = { enabled: false, colormap: "viridis" };
+    Object.assign(this.options, options);
+    this.setOptions(this.options);
 
     this.isDominantQuantity = true;
 
@@ -962,6 +965,7 @@ class VertexScalarQuantity {
     // build a three.js mesh to visualize the function
     this.mesh = new Mesh(this.parent.mesh.geometry.clone(), functionMaterial);
     this.initializeFunctionValues();
+    this.applyColorMap(this.options.colormap);
 
     // Copy some attributes from parent
     this.mesh.geometry.attributes.position = this.parent.mesh.geometry.attributes.position;
@@ -970,23 +974,20 @@ class VertexScalarQuantity {
     this.mesh.material.uniforms.edgeColor = this.parent.mesh.material.uniforms.edgeColor;
   }
 
-  initGui(guiFields, guiFolder) {
+  initGui(guiFolder) {
     this.prefix = this.parent.name + "#" + this.name;
-    this.guiFields = guiFields;
 
-    guiFields[this.prefix + "#Enabled"] = false;
     guiFolder
-      .add(guiFields, this.prefix + "#Enabled")
+      .add(this.options, "enabled")
       .onChange((e) => {
         this.setEnabled(e);
       })
       .listen()
       .name("Enabled");
 
-    guiFields[this.prefix + "#ColorMap"] = "viridis";
-    this.applyColorMap(guiFields[this.prefix + "#ColorMap"]);
+    this.applyColorMap(this.options.colormap);
     guiFolder
-      .add(guiFields, this.prefix + "#ColorMap", availableColorMaps)
+      .add(this.options, "colormap", availableColorMaps)
       .onChange((cm) => {
         this.applyColorMap(cm);
       })
@@ -995,8 +996,7 @@ class VertexScalarQuantity {
   }
 
   setEnabled(enabled) {
-    this.guiFields[this.prefix + "#Enabled"] = enabled;
-    this.enabled = enabled;
+    this.options.enabled = enabled;
     if (enabled) {
       this.parent.enableQuantity(this);
     } else {
@@ -1005,7 +1005,7 @@ class VertexScalarQuantity {
   }
 
   setColorMap(cm) {
-    this.guiFields[this.prefix + "#ColorMap"] = cm;
+    this.options.colormap = cm;
     this.applyColorMap(cm);
   }
 
@@ -1031,6 +1031,19 @@ class VertexScalarQuantity {
     );
   }
 
+  getOptions() {
+    return this.options;
+  }
+
+  setOptions(options) {
+    if (options.hasOwnProperty("colormap")) {
+      this.options.colormap = options.colormap;
+    }
+    if (options.hasOwnProperty("enabled")) {
+      this.options.enabled = options.enabled;
+    }
+  }
+
   getVertexValue(iV) {
     return this.gp.prettyScalar(this.values[iV]);
   }
@@ -1045,12 +1058,14 @@ class VertexScalarQuantity {
 }
 
 class PointCloudScalarQuantity {
-  constructor(name, values, parentCloud) {
+  constructor(name, values, parentCloud, options = {}) {
     this.parent = parentCloud;
     this.gp = this.parent.gp;
     this.values = values;
     this.name = name;
-    this.enabled = false;
+
+    this.options = { enabled: false, colormap: "viridis" };
+    this.setOptions(options);
 
     this.isDominantQuantity = true;
 
@@ -1078,25 +1093,22 @@ class PointCloudScalarQuantity {
     this.mesh.instanceMatrix = this.parent.mesh.instanceMatrix;
 
     this.initializeFunctionValues();
+    this.applyColorMap(this.options.colormap);
   }
 
-  initGui(guiFields, guiFolder) {
+  initGui(guiFolder) {
     this.prefix = this.parent.name + "#" + this.name;
-    this.guiFields = guiFields;
 
-    guiFields[this.prefix + "#Enabled"] = false;
     guiFolder
-      .add(guiFields, this.prefix + "#Enabled")
+      .add(this.options, "enabled")
       .onChange((e) => {
         this.setEnabled(e);
       })
       .listen()
       .name("Enabled");
 
-    guiFields[this.prefix + "#ColorMap"] = "viridis";
-    this.applyColorMap(guiFields[this.prefix + "#ColorMap"]);
     guiFolder
-      .add(guiFields, this.prefix + "#ColorMap", availableColorMaps)
+      .add(this.options, "colormap", availableColorMaps)
       .onChange((cm) => {
         this.applyColorMap(cm);
       })
@@ -1105,8 +1117,7 @@ class PointCloudScalarQuantity {
   }
 
   setEnabled(enabled) {
-    this.guiFields[this.prefix + "#Enabled"] = enabled;
-    this.enabled = enabled;
+    this.options.enabled = enabled;
     if (enabled) {
       this.parent.enableQuantity(this);
     } else {
@@ -1135,6 +1146,19 @@ class PointCloudScalarQuantity {
     );
   }
 
+  getOptions() {
+    return this.options;
+  }
+
+  setOptions(options) {
+    if (options.hasOwnProperty("colormap")) {
+      this.options.colormap = options.colormap;
+    }
+    if (options.hasOwnProperty("enabled")) {
+      this.options.enabled = options.enabled;
+    }
+  }
+
   getVertexValue(iV) {
     return this.values[iV];
   }
@@ -1159,7 +1183,7 @@ function computeMinMax$1(values) {
 }
 
 class VertexDistanceQuantity {
-  constructor(name, values, parentMesh) {
+  constructor(name, values, parentMesh, options = {}) {
     this.parent = parentMesh;
     this.gp = this.parent.gp;
     this.values = values;
@@ -1185,6 +1209,15 @@ class VertexDistanceQuantity {
     );
     this.initializeDistances(this.values);
 
+    this.options = {
+      enabled: false,
+      stripes: 20,
+      offset: 0.2,
+      colormap: "rdpu",
+    };
+    Object.assign(this.options, options);
+    this.setOptions(this.options);
+
     // Copy some attributes from parent
     this.mesh.geometry.attributes.position = this.parent.mesh.geometry.attributes.position;
     this.mesh.geometry.attributes.normal = this.parent.mesh.geometry.attributes.normal;
@@ -1192,23 +1225,19 @@ class VertexDistanceQuantity {
     this.mesh.material.uniforms.edgeColor = this.parent.mesh.material.uniforms.edgeColor;
   }
 
-  initGui(guiFields, guiFolder) {
+  initGui(guiFolder) {
     this.prefix = this.parent.name + "#" + this.name;
-    this.guiFields = guiFields;
 
-    guiFields[this.prefix + "#Enabled"] = false;
     guiFolder
-      .add(guiFields, this.prefix + "#Enabled")
+      .add(this.options, "enabled")
       .onChange((e) => {
         this.setEnabled(e);
       })
       .listen()
       .name("Enabled");
 
-    guiFields[this.name + "#Stripes"] = 20;
-    this.setStripes(guiFields[this.name + "#Stripes"]);
     guiFolder
-      .add(guiFields, this.name + "#Stripes")
+      .add(this.options, "stripes")
       .min(0)
       .max(50)
       .step(0.5)
@@ -1218,10 +1247,8 @@ class VertexDistanceQuantity {
       .listen()
       .name("Stripes");
 
-    guiFields[this.name + "#Offset"] = 0.2;
-    this.setOffset(guiFields[this.name + "#Offset"]);
     guiFolder
-      .add(guiFields, this.name + "#Offset")
+      .add(this.options, "offset")
       .min(0)
       .max(0.5)
       .step(0.05)
@@ -1231,10 +1258,8 @@ class VertexDistanceQuantity {
       .listen()
       .name("Offset");
 
-    guiFields[this.prefix + "#ColorMap"] = "rdpu";
-    this.applyColorMap(guiFields[this.prefix + "#ColorMap"]);
     guiFolder
-      .add(guiFields, this.prefix + "#ColorMap", availableColorMaps)
+      .add(this.options, "colormap", availableColorMaps)
       .onChange((cm) => {
         this.applyColorMap(cm);
       })
@@ -1242,8 +1267,27 @@ class VertexDistanceQuantity {
       .name("Color Map");
   }
 
+  getOptions() {
+    return this.options;
+  }
+
+  setOptions(options) {
+    if (options.hasOwnProperty("colormap")) {
+      this.setColorMap(options.colormap);
+    }
+    if (options.hasOwnProperty("stripes")) {
+      this.setStripes(options.stripes);
+    }
+    if (options.hasOwnProperty("offset")) {
+      this.setOffset(options.offset);
+    }
+    if (options.hasOwnProperty("enabled")) {
+      this.setEnabled(options.enabled);
+    }
+  }
+
   setEnabled(enabled) {
-    this.guiFields[this.prefix + "#Enabled"] = enabled;
+    this.options.enabled = enabled;
     this.enabled = enabled;
     if (enabled) {
       this.parent.enableQuantity(this);
@@ -1253,15 +1297,17 @@ class VertexDistanceQuantity {
   }
 
   setColorMap(cm) {
-    this.guiFields[this.prefix + "#ColorMap"] = cm;
+    this.options.colormap = cm;
     this.applyColorMap(cm);
   }
 
   setStripes(stripes) {
+    this.options.stripes = stripes;
     this.mesh.material.uniforms.scale.value = stripes;
   }
 
   setOffset(offset) {
+    this.options.offset = offset;
     this.mesh.material.uniforms.offset.value = offset;
   }
 
@@ -1301,7 +1347,7 @@ class VertexDistanceQuantity {
 }
 
 class VertexVectorQuantity {
-  constructor(name, values, parentMesh) {
+  constructor(name, values, parentMesh, options = {}) {
     this.parent = parentMesh;
     this.gp = this.parent.gp;
     this.values = values;
@@ -1317,6 +1363,12 @@ class VertexVectorQuantity {
 
     // build a three.js mesh to visualize the function
     this.mesh = this.constructArrowMesh(this.parent.coords, values);
+
+    this.options = { enabled: true, radius: 0.5 };
+    this.options.color = options.color || getNextUniqueColor();
+    // copy anything set in options to this.options
+    Object.assign(this.options, { options });
+    this.setOptions(this.options);
   }
 
   constructArrowMesh(bases, directions) {
@@ -1392,33 +1444,27 @@ class VertexVectorQuantity {
     return arrows;
   }
 
-  initGui(guiFields, guiFolder) {
+  initGui(guiFolder) {
     this.prefix = this.parent.name + "#" + this.name;
-    this.guiFields = guiFields;
 
-    guiFields[this.prefix + "#Enabled"] = false;
     guiFolder
-      .add(guiFields, this.prefix + "#Enabled")
+      .add(this.options, "enabled")
       .onChange((e) => {
         this.setEnabled(e);
       })
       .listen()
       .name("Enabled");
 
-    guiFields[this.name + "#Color"] = getNextUniqueColor();
-    this.setColor(guiFields[this.name + "#Color"]);
     guiFolder
-      .addColor(guiFields, this.name + "#Color")
+      .addColor(this.options, "color")
       .onChange((c) => {
         this.setColor(c);
       })
       .listen()
       .name("Color");
 
-    guiFields[this.name + "#Radius"] = 1;
-    this.setRadius(guiFields[this.name + "#Radius"]);
     guiFolder
-      .add(guiFields, this.name + "#Radius")
+      .add(this.options, "radius")
       .min(0)
       .max(5)
       .step(0.05)
@@ -1430,24 +1476,41 @@ class VertexVectorQuantity {
   }
 
   setColor(color) {
+    this.options.color = color;
     let c = new Vector3(color[0] / 255, color[1] / 255, color[2] / 255);
     this.torsoMesh.material.uniforms.color.value = c;
     this.tipMesh.material.uniforms.color.value = c;
   }
 
   setRadius(rad) {
+    this.options.radius = rad;
     this.torsoMesh.material.uniforms.scale.value = rad * 0.05;
     this.tipMesh.material.uniforms.scale.value = rad * 0.05;
   }
 
   setEnabled(enabled) {
-    this.guiFields[this.prefix + "#Enabled"] = enabled;
-    this.enabled = enabled;
+    this.options.enabled = enabled;
     if (enabled) {
       this.parent.enableQuantity(this);
     } else {
       this.parent.disableQuantity(this);
     }
+  }
+
+  setOptions(options) {
+    if (options.hasOwnProperty("color")) {
+      this.setColor(options.color);
+    }
+    if (options.hasOwnProperty("radius")) {
+      this.setRadius(options.radius);
+    }
+    if (options.hasOwnProperty("enabled")) {
+      this.setEnabled(options.enabled);
+    }
+  }
+
+  getOptions() {
+    return this.options;
   }
 
   getVertexValue(iV) {
@@ -1464,7 +1527,7 @@ class VertexVectorQuantity {
 }
 
 class VertexParameterizationQuantity {
-  constructor(name, coords, parentMesh) {
+  constructor(name, coords, parentMesh, options = {}) {
     this.parent = parentMesh;
     this.gp = this.parent.gp;
     this.coords = coords;
@@ -1490,55 +1553,53 @@ class VertexParameterizationQuantity {
     this.mesh.geometry.attributes.normal = this.parent.mesh.geometry.attributes.normal;
     this.mesh.material.uniforms.edgeWidth = this.parent.mesh.material.uniforms.edgeWidth;
     this.mesh.material.uniforms.edgeColor = this.parent.mesh.material.uniforms.edgeColor;
+
+    this.options = {
+      enabled: false,
+      style: "checker",
+      color1: [249, 45, 94],
+      color2: [249, 219, 225],
+      scale: 1,
+    };
+    Object.assign(this.options, options);
+    this.setOptions(this.options);
   }
 
-  initGui(guiFields, guiFolder) {
-    this.prefix = this.parent.name + "#" + this.name;
-    this.guiFields = guiFields;
-
-    guiFields[this.prefix + "#Enabled"] = false;
+  initGui(guiFolder) {
     guiFolder
-      .add(guiFields, this.prefix + "#Enabled")
+      .add(this.options, "enabled")
       .onChange((e) => {
         this.setEnabled(e);
       })
       .listen()
       .name("Enabled");
 
-    guiFields[this.prefix + "#Style"] = "checker";
-    // this.applyStyle(guiFields[this.prefix + "#Style"]);
     guiFolder
-      .add(guiFields, this.prefix + "#Style", ["checker", "grid"])
+      .add(this.options, "style", ["checker", "grid"])
       .onChange((s) => {
-        this.applyStyle(s);
+        this.setStyle(s);
       })
       .listen()
       .name("Color Map");
 
-    guiFields[this.name + "#Color1"] = [249, 45, 94];
-    this.setColor1(guiFields[this.name + "#Color1"]);
     guiFolder
-      .addColor(guiFields, this.name + "#Color1")
+      .addColor(this.options, "color1")
       .onChange((c) => {
         this.setColor1(c);
       })
       .listen()
       .name("Color");
 
-    guiFields[this.name + "#Color2"] = [249, 219, 225];
-    this.setColor2(guiFields[this.name + "#Color2"]);
     guiFolder
-      .addColor(guiFields, this.name + "#Color2")
+      .addColor(this.options, "color2")
       .onChange((c) => {
         this.setColor2(c);
       })
       .listen()
       .name("Color");
 
-    guiFields[this.name + "#Scale"] = 1;
-    this.setScale(guiFields[this.name + "#Scale"]);
     guiFolder
-      .add(guiFields, this.name + "#Scale")
+      .add(this.options, "scale")
       .min(0)
       .max(2)
       .step(0.05)
@@ -1550,22 +1611,24 @@ class VertexParameterizationQuantity {
   }
 
   setScale(scale) {
+    this.options.scale = scale;
     this.mesh.material.uniforms.paramScale.value = scale / 10;
   }
 
   setColor1(color) {
+    this.options.color1 = color;
     let c = new Vector3(color[0] / 255, color[1] / 255, color[2] / 255);
     this.mesh.material.uniforms.color1.value = c;
   }
 
   setColor2(color) {
+    this.options.color2 = color;
     let c = new Vector3(color[0] / 255, color[1] / 255, color[2] / 255);
     this.mesh.material.uniforms.color2.value = c;
   }
 
   setEnabled(enabled) {
-    this.guiFields[this.prefix + "#Enabled"] = enabled;
-    this.enabled = enabled;
+    this.options.enabled = enabled;
     if (enabled) {
       this.parent.enableQuantity(this);
     } else {
@@ -1573,7 +1636,8 @@ class VertexParameterizationQuantity {
     }
   }
 
-  applyStyle(style) {
+  setStyle(style) {
+    this.options.style = style;
     if (style == "checker") {
       this.mesh.material = VertexParamCheckerboard(
         this.gp.matcapTextures.r,
@@ -1590,13 +1654,40 @@ class VertexParameterizationQuantity {
       );
     }
     // Reset material uniforms
-    this.setColor1(this.guiFields[this.name + "#Color1"]);
-    this.setColor2(this.guiFields[this.name + "#Color2"]);
-    this.setScale(this.guiFields[this.name + "#Scale"]);
+    this.setColor1(this.options.color1);
+    this.setColor2(this.options.color2);
+    this.setScale(this.options.scale);
 
     // Copy some attributes from parent
     this.mesh.material.uniforms.edgeWidth = this.parent.mesh.material.uniforms.edgeWidth;
     this.mesh.material.uniforms.edgeColor = this.parent.mesh.material.uniforms.edgeColor;
+  }
+
+  // enabled: false,
+  // style: "checker",
+  // color1: [249, 45, 94],
+  // color2: [249, 219, 225],
+  // scale: 1,
+  setOptions(options) {
+    if (options.hasOwnProperty("style")) {
+      this.setStyle(options.style);
+    }
+    if (options.hasOwnProperty("color1")) {
+      this.setColor1(options.color1);
+    }
+    if (options.hasOwnProperty("color2")) {
+      this.setColor2(options.color2);
+    }
+    if (options.hasOwnProperty("style")) {
+      this.setStyle(options.style);
+    }
+    if (options.hasOwnProperty("enabled")) {
+      this.setEnabled(options.enabled);
+    }
+  }
+
+  getOptions() {
+    return this.options;
   }
 
   initParam(coords) {
@@ -1777,8 +1868,6 @@ class SurfaceMesh {
     this.name = name;
     this.enabled = true;
 
-    this.color = options.color || getNextUniqueColor();
-
     // build three.js mesh
     [this.mesh, this.geo] = this.constructThreeMesh(coords, faces);
 
@@ -1792,10 +1881,25 @@ class SurfaceMesh {
 
     this.quantities = {};
 
-    this.setSmoothShading(true);
-
-    this.guiFields = undefined;
     this.guiFolder = undefined;
+    this.edgeGuis = [];
+
+    // Default options
+    this.options = {
+      enabled: true,
+      smooth: true,
+      edgesEnabled: false,
+      edgeColor: [0, 0, 0],
+      edgeWidth: 1,
+    };
+    this.options.color = options.color || getNextUniqueColor();
+
+    // copy anything set in options to this.options
+    Object.assign(this.options, { options });
+    this.setOptions(this.options);
+
+    this.setSmoothShading(this.options.smooth);
+    this.setColor(this.options.color);
 
     this.vertexPickCallback = (iV) => {};
     this.edgePickCallback = (iE) => {};
@@ -1803,47 +1907,76 @@ class SurfaceMesh {
   }
 
   addVertexScalarQuantity(name, values) {
-    this.quantities[name] = new VertexScalarQuantity(name, values, this);
+    const options = this.quantities[name]
+      ? this.quantities[name].getOptions()
+      : {};
+    console.log(options);
+    this.quantities[name] = new VertexScalarQuantity(
+      name,
+      values,
+      this,
+      options
+    );
 
     this.guiFolder.removeFolder(name);
     let quantityGui = this.guiFolder.addFolder(name);
-    this.quantities[name].initGui(this.guiFields, quantityGui);
+    this.quantities[name].initGui(quantityGui);
 
     return this.quantities[name];
   }
 
   addVertexDistanceQuantity(name, values) {
-    this.quantities[name] = new VertexDistanceQuantity(name, values, this);
+    const options = this.quantities[name]
+      ? this.quantities[name].getOptions()
+      : {};
+    this.quantities[name] = new VertexDistanceQuantity(
+      name,
+      values,
+      this,
+      options
+    );
 
     this.guiFolder.removeFolder(name);
     let quantityGui = this.guiFolder.addFolder(name);
-    this.quantities[name].initGui(this.guiFields, quantityGui);
+    this.quantities[name].initGui(quantityGui);
 
     return this.quantities[name];
   }
 
   addVertexVectorQuantity(name, values) {
+    const options = this.quantities[name]
+      ? this.quantities[name].getOptions()
+      : {};
     values = standardizeVector3Array(values);
-    this.quantities[name] = new VertexVectorQuantity(name, values, this);
+    this.quantities[name] = new VertexVectorQuantity(
+      name,
+      values,
+      this,
+      options
+    );
 
     this.guiFolder.removeFolder(name);
     let quantityGui = this.guiFolder.addFolder(name);
-    this.quantities[name].initGui(this.guiFields, quantityGui);
+    this.quantities[name].initGui(quantityGui);
 
     return this.quantities[name];
   }
 
   addVertexParameterizationQuantity(name, values) {
+    const options = this.quantities[name]
+      ? this.quantities[name].getOptions()
+      : {};
     values = standardizeVector2Array(values);
     this.quantities[name] = new VertexParameterizationQuantity(
       name,
       values,
-      this
+      this,
+      options
     );
 
     this.guiFolder.removeFolder(name);
     let quantityGui = this.guiFolder.addFolder(name);
-    this.quantities[name].initGui(this.guiFields, quantityGui);
+    this.quantities[name].initGui(quantityGui);
 
     return this.quantities[name];
   }
@@ -1863,9 +1996,8 @@ class SurfaceMesh {
     meshInfoBox.appendChild(vertexInfo);
     meshInfoBox.appendChild(faceInfo);
 
-    guiFields[this.name + "#Enabled"] = true;
     const enabledButton = guiFolder
-      .add(guiFields, this.name + "#Enabled")
+      .add(this.options, "enabled")
       .onChange((e) => {
         this.setEnabled(e);
       })
@@ -1875,9 +2007,8 @@ class SurfaceMesh {
     row.classList.add("half-button");
     row.style.width = "35%";
 
-    guiFields[this.name + "#Smooth"] = true;
     const smoothButton = guiFolder
-      .add(guiFields, this.name + "#Smooth")
+      .add(this.options, "smooth")
       .onChange((c) => {
         this.setSmoothShading(c);
       })
@@ -1887,9 +2018,8 @@ class SurfaceMesh {
     row.classList.add("half-button");
     row.style.width = "35%";
 
-    guiFields[this.name + "#Edges"] = false;
     const edgesButton = guiFolder
-      .add(guiFields, this.name + "#Edges")
+      .add(this.options, "edgesEnabled")
       .onChange((c) => {
         this.setEdgesEnabled(c);
       })
@@ -1899,38 +2029,30 @@ class SurfaceMesh {
     row.classList.add("half-button");
     row.style.width = "30%";
 
-    guiFields[this.name + "#Color"] = this.color;
-    this.setColor(guiFields[this.name + "#Color"]);
     guiFolder
-      .addColor(guiFields, this.name + "#Color")
+      .addColor(this.options, "color")
       .onChange((c) => {
         this.setColor(c);
       })
       .listen()
       .name("Color");
 
-    guiFields[this.name + "#Edge Width"] = 0;
-    // keep your own store of the edge width so it doesn't get forgotten
-    // if you set the edge width to zero to turn off edges
-    this.edgeWidth = 1;
     const edgeWidthInput = guiFolder
-      .add(guiFields, this.name + "#Edge Width")
+      .add(this.options, "edgeWidth")
       .min(0)
       .max(2)
       .step(0.05)
       .onChange((width) => {
-        this.edgeWidth = width;
-        this.mesh.material.uniforms.edgeWidth.value = width;
+        this.setEdgeWidth(width);
       })
       .listen()
       .name("Edge Width");
     row = edgeWidthInput.domElement.closest("li");
     row.style.display = "none";
-    this.edgeGuis = [row];
+    this.edgeGuis.push(row);
 
-    guiFields[this.name + "#Edge Color"] = [0, 0, 0];
     const edgeColorInput = guiFolder
-      .addColor(guiFields, this.name + "#Edge Color")
+      .addColor(this.options, "edgeColor")
       .onChange((c) => {
         this.setEdgeColor(c);
       })
@@ -1944,20 +2066,19 @@ class SurfaceMesh {
   }
 
   setEdgesEnabled(enabled) {
-    this.guiFields[this.name + "#Edges"] = enabled;
+    this.options.edges = enabled;
     for (let elem of this.edgeGuis) {
       elem.style.display = enabled ? "block" : "none";
     }
     if (enabled) {
-      this.mesh.material.uniforms.edgeWidth.value = this.edgeWidth;
-      this.guiFields[this.name + "#Edge Width"] = this.edgeWidth;
+      this.mesh.material.uniforms.edgeWidth.value = this.options.edgeWidth;
     } else {
       this.mesh.material.uniforms.edgeWidth.value = 0;
-      this.guiFields[this.name + "#Edge Width"] = 0;
     }
   }
 
   setSmoothShading(shadeSmooth) {
+    this.options.smooth = shadeSmooth;
     if (shadeSmooth) {
       // make a copy of smoothCornerNormals rather than setting the geometry's normals
       // to smoothCornerNormals themselves so that calling computeVertexNormals later
@@ -1972,23 +2093,25 @@ class SurfaceMesh {
   }
 
   setColor(color) {
-    this.color = color;
+    this.options.color = color;
     let c = new Vector3(color[0] / 255, color[1] / 255, color[2] / 255);
     this.mesh.material.uniforms.color.value = c;
   }
 
-  getColor() {
-    return this.color;
-  }
-
   setEdgeColor(color) {
+    this.options.edgeColor = color;
     let c = new Vector3(color[0] / 255, color[1] / 255, color[2] / 255);
     this.mesh.material.uniforms.edgeColor.value = c;
   }
 
+  setEdgeWidth(width) {
+    this.options.edgeWidth = width;
+    this.edgeWidth = width;
+    this.mesh.material.uniforms.edgeWidth.value = width;
+  }
+
   setEnabled(enabled) {
-    this.enabled = enabled;
-    this.guiFields[this.name + "#Enabled"] = enabled;
+    this.options.enabled = enabled;
     if (enabled) {
       let enabledQuantity = false;
       for (let q in this.quantities) {
@@ -2010,12 +2133,37 @@ class SurfaceMesh {
     }
   }
 
+  getOptions() {
+    return this.options;
+  }
+
+  setOptions(options) {
+    if (options.hasOwnProperty("edgeWidth")) {
+      this.setEdgeWidth(options.edgeWidth);
+    }
+    if (options.hasOwnProperty("edgeColor")) {
+      this.setEdgeColor(options.edgeColor);
+    }
+    if (options.hasOwnProperty("edgesEnabled")) {
+      this.setEdgesEnabled(options.edgesEnabled);
+    }
+    if (options.hasOwnProperty("color")) {
+      this.setColor(options.color);
+    }
+    if (options.hasOwnProperty("smooth")) {
+      this.setSmoothShading(options.smooth);
+    }
+    if (options.hasOwnProperty("enabled")) {
+      this.setEnabled(options.enabled);
+    }
+  }
+
   enableQuantity(q) {
     if (q.isDominantQuantity) {
       for (let pName in this.quantities) {
         let p = this.quantities[pName];
         if (p.isDominantQuantity && pName != q.name) {
-          this.guiFields[p.prefix + "#Enabled"] = false;
+          this.options.enabled = false;
           p.enabled = false;
           this.gp.scene.remove(p.mesh);
         }
@@ -2322,7 +2470,12 @@ class PointCloud {
     this.coords = coords;
     this.name = name;
     this.enabled = true;
-    this.color = options.color || getNextUniqueColor();
+
+    this.options = { radius: 1, enabled: true };
+    this.options.color = this.options.color || getNextUniqueColor();
+    Object.assign(this.options, options);
+
+    this.setOptions(this.options);
 
     // build three.js mesh
     this.mesh = this.constructThreeMesh(coords);
@@ -2331,18 +2484,16 @@ class PointCloud {
 
     this.quantities = {};
 
-    this.guiFields = undefined;
     this.guiFolder = undefined;
   }
 
   addScalarQuantity(name, values) {
     this.quantities[name] = new PointCloudScalarQuantity(name, values, this);
     let quantityGui = this.guiFolder.addFolder(name);
-    this.quantities[name].initGui(this.guiFields, quantityGui);
+    this.quantities[name].initGui(quantityGui);
   }
 
-  initGui(guiFields, guiFolder) {
-    this.guiFields = guiFields;
+  initGui(guiFolder) {
     this.guiFolder = guiFolder;
 
     let objectGuiList = guiFolder.domElement.firstChild;
@@ -2353,29 +2504,24 @@ class PointCloud {
     vertexInfo.innerHTML = "#verts: " + this.nV;
     meshInfoBox.appendChild(vertexInfo);
 
-    guiFields[this.name + "#Enabled"] = true;
     guiFolder
-      .add(guiFields, this.name + "#Enabled")
+      .add(this.options, "enabled")
       .onChange((e) => {
         this.setEnabled(e);
       })
       .listen()
       .name("Enabled");
 
-    guiFields[this.name + "#Color"] = this.color;
-    this.setColor(guiFields[this.name + "#Color"]);
     guiFolder
-      .addColor(guiFields, this.name + "#Color")
+      .addColor(this.options, "color")
       .onChange((c) => {
         this.setColor(c);
       })
       .listen()
       .name("Color");
 
-    guiFields[this.name + "#Radius"] = 1;
-    this.setRadius(guiFields[this.name + "#Radius"]);
     guiFolder
-      .add(guiFields, this.name + "#Radius")
+      .add(this.options, "radius")
       .min(0)
       .max(5)
       .step(0.05)
@@ -2389,23 +2535,36 @@ class PointCloud {
   }
 
   setColor(color) {
-    this.color = color;
+    this.options.color = color;
     let c = new Vector3(color[0] / 255, color[1] / 255, color[2] / 255);
     this.mesh.material.uniforms.color.value = c;
   }
 
-  getColor() {
-    return this.color;
+  getOptions() {
+    this.options;
+  }
+
+  setOptions(options) {
+    if (options.hasOwnProperty("color")) {
+      this.options.color = options.color;
+    }
+    if (options.hasOwnProperty("radius")) {
+      this.options.radius = options.radius;
+    }
+    if (options.hasOwnProperty("enabled")) {
+      this.options.enabled = options.enabled;
+    }
   }
 
   setRadius(rad) {
+    this.options.radius = rad;
     this.mesh.material.uniforms.scale.value = rad;
 
     if (this.gp.doPicks) this.pickMesh.material.uniforms.scale.value = rad;
   }
 
   setEnabled(enabled) {
-    this.guiFields[this.name + "#Enabled"] = enabled;
+    this.options.enabled = enabled;
     this.enabled = enabled;
     if (enabled) {
       let enabledQuantity = false;
@@ -2433,8 +2592,8 @@ class PointCloud {
       for (let pName in this.quantities) {
         let p = this.quantities[pName];
         if (p.isDominantQuantity && pName != q.name) {
-          this.guiFields[p.prefix + "#Enabled"] = false;
-          p.enabled = false;
+          this.options.enabled = false;
+          p.options.enabled = false;
           this.gp.scene.remove(p.mesh);
         }
       }
@@ -3094,7 +3253,7 @@ class Geoptic {
     // copy its properties and delete it
     const options = {};
     if (this.surfaceMeshes[name]) {
-      options.color = this.surfaceMeshes[name].getColor();
+      options = this.surfaceMeshes[name].getOptions();
       this.deregisterSurfaceMesh(name);
     }
 
@@ -3184,9 +3343,10 @@ class Geoptic {
 
     // If there's an existing strucure with this name,
     // copy its properties and delete it
-    const options = {};
+    const options = this.pointClouds[name]
+      ? this.pointClouds[name].getOptions()
+      : {};
     if (this.pointClouds[name]) {
-      options.color = this.pointClouds[name].getColor();
       this.deregisterPointCloud(name);
     }
 
@@ -3194,7 +3354,7 @@ class Geoptic {
     this.pointClouds[name] = cloudStructure;
 
     let cloudGui = this.structureGuiPointClouds.addFolder(name);
-    cloudStructure.initGui(this.structureGuiFields, cloudGui);
+    cloudStructure.initGui(cloudGui);
 
     this.scene.add(cloudStructure.mesh);
     if (this.doPicks) this.pickScene.add(cloudStructure.pickMesh);

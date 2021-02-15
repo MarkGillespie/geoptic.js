@@ -24,7 +24,12 @@ class PointCloud {
     this.coords = coords;
     this.name = name;
     this.enabled = true;
-    this.color = options.color || getNextUniqueColor();
+
+    this.options = { radius: 1, enabled: true };
+    this.options.color = this.options.color || getNextUniqueColor();
+    Object.assign(this.options, options);
+
+    this.setOptions(this.options);
 
     // build three.js mesh
     this.mesh = this.constructThreeMesh(coords);
@@ -33,18 +38,16 @@ class PointCloud {
 
     this.quantities = {};
 
-    this.guiFields = undefined;
     this.guiFolder = undefined;
   }
 
   addScalarQuantity(name, values) {
     this.quantities[name] = new PointCloudScalarQuantity(name, values, this);
     let quantityGui = this.guiFolder.addFolder(name);
-    this.quantities[name].initGui(this.guiFields, quantityGui);
+    this.quantities[name].initGui(quantityGui);
   }
 
-  initGui(guiFields, guiFolder) {
-    this.guiFields = guiFields;
+  initGui(guiFolder) {
     this.guiFolder = guiFolder;
 
     let objectGuiList = guiFolder.domElement.firstChild;
@@ -55,29 +58,24 @@ class PointCloud {
     vertexInfo.innerHTML = "#verts: " + this.nV;
     meshInfoBox.appendChild(vertexInfo);
 
-    guiFields[this.name + "#Enabled"] = true;
     guiFolder
-      .add(guiFields, this.name + "#Enabled")
+      .add(this.options, "enabled")
       .onChange((e) => {
         this.setEnabled(e);
       })
       .listen()
       .name("Enabled");
 
-    guiFields[this.name + "#Color"] = this.color;
-    this.setColor(guiFields[this.name + "#Color"]);
     guiFolder
-      .addColor(guiFields, this.name + "#Color")
+      .addColor(this.options, "color")
       .onChange((c) => {
         this.setColor(c);
       })
       .listen()
       .name("Color");
 
-    guiFields[this.name + "#Radius"] = 1;
-    this.setRadius(guiFields[this.name + "#Radius"]);
     guiFolder
-      .add(guiFields, this.name + "#Radius")
+      .add(this.options, "radius")
       .min(0)
       .max(5)
       .step(0.05)
@@ -91,23 +89,36 @@ class PointCloud {
   }
 
   setColor(color) {
-    this.color = color;
+    this.options.color = color;
     let c = new Vector3(color[0] / 255, color[1] / 255, color[2] / 255);
     this.mesh.material.uniforms.color.value = c;
   }
 
-  getColor() {
-    return this.color;
+  getOptions() {
+    this.options;
+  }
+
+  setOptions(options) {
+    if (options.hasOwnProperty("color")) {
+      this.options.color = options.color;
+    }
+    if (options.hasOwnProperty("radius")) {
+      this.options.radius = options.radius;
+    }
+    if (options.hasOwnProperty("enabled")) {
+      this.options.enabled = options.enabled;
+    }
   }
 
   setRadius(rad) {
+    this.options.radius = rad;
     this.mesh.material.uniforms.scale.value = rad;
 
     if (this.gp.doPicks) this.pickMesh.material.uniforms.scale.value = rad;
   }
 
   setEnabled(enabled) {
-    this.guiFields[this.name + "#Enabled"] = enabled;
+    this.options.enabled = enabled;
     this.enabled = enabled;
     if (enabled) {
       let enabledQuantity = false;
@@ -135,8 +146,8 @@ class PointCloud {
       for (let pName in this.quantities) {
         let p = this.quantities[pName];
         if (p.isDominantQuantity && pName != q.name) {
-          this.guiFields[p.prefix + "#Enabled"] = false;
-          p.enabled = false;
+          this.options.enabled = false;
+          p.options.enabled = false;
           this.gp.scene.remove(p.mesh);
         }
       }

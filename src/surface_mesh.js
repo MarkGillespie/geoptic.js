@@ -34,8 +34,6 @@ class SurfaceMesh {
     this.name = name;
     this.enabled = true;
 
-    this.color = options.color || getNextUniqueColor();
-
     // build three.js mesh
     [this.mesh, this.geo] = this.constructThreeMesh(coords, faces);
 
@@ -49,10 +47,25 @@ class SurfaceMesh {
 
     this.quantities = {};
 
-    this.setSmoothShading(true);
-
-    this.guiFields = undefined;
     this.guiFolder = undefined;
+    this.edgeGuis = [];
+
+    // Default options
+    this.options = {
+      enabled: true,
+      smooth: true,
+      edgesEnabled: false,
+      edgeColor: [0, 0, 0],
+      edgeWidth: 1,
+    };
+    this.options.color = options.color || getNextUniqueColor();
+
+    // copy anything set in options to this.options
+    Object.assign(this.options, { options });
+    this.setOptions(this.options);
+
+    this.setSmoothShading(this.options.smooth);
+    this.setColor(this.options.color);
 
     this.vertexPickCallback = (iV) => {};
     this.edgePickCallback = (iE) => {};
@@ -60,47 +73,76 @@ class SurfaceMesh {
   }
 
   addVertexScalarQuantity(name, values) {
-    this.quantities[name] = new VertexScalarQuantity(name, values, this);
+    const options = this.quantities[name]
+      ? this.quantities[name].getOptions()
+      : {};
+    console.log(options);
+    this.quantities[name] = new VertexScalarQuantity(
+      name,
+      values,
+      this,
+      options
+    );
 
     this.guiFolder.removeFolder(name);
     let quantityGui = this.guiFolder.addFolder(name);
-    this.quantities[name].initGui(this.guiFields, quantityGui);
+    this.quantities[name].initGui(quantityGui);
 
     return this.quantities[name];
   }
 
   addVertexDistanceQuantity(name, values) {
-    this.quantities[name] = new VertexDistanceQuantity(name, values, this);
+    const options = this.quantities[name]
+      ? this.quantities[name].getOptions()
+      : {};
+    this.quantities[name] = new VertexDistanceQuantity(
+      name,
+      values,
+      this,
+      options
+    );
 
     this.guiFolder.removeFolder(name);
     let quantityGui = this.guiFolder.addFolder(name);
-    this.quantities[name].initGui(this.guiFields, quantityGui);
+    this.quantities[name].initGui(quantityGui);
 
     return this.quantities[name];
   }
 
   addVertexVectorQuantity(name, values) {
+    const options = this.quantities[name]
+      ? this.quantities[name].getOptions()
+      : {};
     values = standardizeVector3Array(values);
-    this.quantities[name] = new VertexVectorQuantity(name, values, this);
+    this.quantities[name] = new VertexVectorQuantity(
+      name,
+      values,
+      this,
+      options
+    );
 
     this.guiFolder.removeFolder(name);
     let quantityGui = this.guiFolder.addFolder(name);
-    this.quantities[name].initGui(this.guiFields, quantityGui);
+    this.quantities[name].initGui(quantityGui);
 
     return this.quantities[name];
   }
 
   addVertexParameterizationQuantity(name, values) {
+    const options = this.quantities[name]
+      ? this.quantities[name].getOptions()
+      : {};
     values = standardizeVector2Array(values);
     this.quantities[name] = new VertexParameterizationQuantity(
       name,
       values,
-      this
+      this,
+      options
     );
 
     this.guiFolder.removeFolder(name);
     let quantityGui = this.guiFolder.addFolder(name);
-    this.quantities[name].initGui(this.guiFields, quantityGui);
+    this.quantities[name].initGui(quantityGui);
 
     return this.quantities[name];
   }
@@ -120,9 +162,8 @@ class SurfaceMesh {
     meshInfoBox.appendChild(vertexInfo);
     meshInfoBox.appendChild(faceInfo);
 
-    guiFields[this.name + "#Enabled"] = true;
     const enabledButton = guiFolder
-      .add(guiFields, this.name + "#Enabled")
+      .add(this.options, "enabled")
       .onChange((e) => {
         this.setEnabled(e);
       })
@@ -132,9 +173,8 @@ class SurfaceMesh {
     row.classList.add("half-button");
     row.style.width = "35%";
 
-    guiFields[this.name + "#Smooth"] = true;
     const smoothButton = guiFolder
-      .add(guiFields, this.name + "#Smooth")
+      .add(this.options, "smooth")
       .onChange((c) => {
         this.setSmoothShading(c);
       })
@@ -144,9 +184,8 @@ class SurfaceMesh {
     row.classList.add("half-button");
     row.style.width = "35%";
 
-    guiFields[this.name + "#Edges"] = false;
     const edgesButton = guiFolder
-      .add(guiFields, this.name + "#Edges")
+      .add(this.options, "edgesEnabled")
       .onChange((c) => {
         this.setEdgesEnabled(c);
       })
@@ -156,38 +195,30 @@ class SurfaceMesh {
     row.classList.add("half-button");
     row.style.width = "30%";
 
-    guiFields[this.name + "#Color"] = this.color;
-    this.setColor(guiFields[this.name + "#Color"]);
     const colorButton = guiFolder
-      .addColor(guiFields, this.name + "#Color")
+      .addColor(this.options, "color")
       .onChange((c) => {
         this.setColor(c);
       })
       .listen()
       .name("Color");
 
-    guiFields[this.name + "#Edge Width"] = 0;
-    // keep your own store of the edge width so it doesn't get forgotten
-    // if you set the edge width to zero to turn off edges
-    this.edgeWidth = 1;
     const edgeWidthInput = guiFolder
-      .add(guiFields, this.name + "#Edge Width")
+      .add(this.options, "edgeWidth")
       .min(0)
       .max(2)
       .step(0.05)
       .onChange((width) => {
-        this.edgeWidth = width;
-        this.mesh.material.uniforms.edgeWidth.value = width;
+        this.setEdgeWidth(width);
       })
       .listen()
       .name("Edge Width");
     row = edgeWidthInput.domElement.closest("li");
     row.style.display = "none";
-    this.edgeGuis = [row];
+    this.edgeGuis.push(row);
 
-    guiFields[this.name + "#Edge Color"] = [0, 0, 0];
     const edgeColorInput = guiFolder
-      .addColor(guiFields, this.name + "#Edge Color")
+      .addColor(this.options, "edgeColor")
       .onChange((c) => {
         this.setEdgeColor(c);
       })
@@ -201,20 +232,19 @@ class SurfaceMesh {
   }
 
   setEdgesEnabled(enabled) {
-    this.guiFields[this.name + "#Edges"] = enabled;
+    this.options.edges = enabled;
     for (let elem of this.edgeGuis) {
       elem.style.display = enabled ? "block" : "none";
     }
     if (enabled) {
-      this.mesh.material.uniforms.edgeWidth.value = this.edgeWidth;
-      this.guiFields[this.name + "#Edge Width"] = this.edgeWidth;
+      this.mesh.material.uniforms.edgeWidth.value = this.options.edgeWidth;
     } else {
       this.mesh.material.uniforms.edgeWidth.value = 0;
-      this.guiFields[this.name + "#Edge Width"] = 0;
     }
   }
 
   setSmoothShading(shadeSmooth) {
+    this.options.smooth = shadeSmooth;
     if (shadeSmooth) {
       // make a copy of smoothCornerNormals rather than setting the geometry's normals
       // to smoothCornerNormals themselves so that calling computeVertexNormals later
@@ -229,23 +259,25 @@ class SurfaceMesh {
   }
 
   setColor(color) {
-    this.color = color;
+    this.options.color = color;
     let c = new Vector3(color[0] / 255, color[1] / 255, color[2] / 255);
     this.mesh.material.uniforms.color.value = c;
   }
 
-  getColor() {
-    return this.color;
-  }
-
   setEdgeColor(color) {
+    this.options.edgeColor = color;
     let c = new Vector3(color[0] / 255, color[1] / 255, color[2] / 255);
     this.mesh.material.uniforms.edgeColor.value = c;
   }
 
+  setEdgeWidth(width) {
+    this.options.edgeWidth = width;
+    this.edgeWidth = width;
+    this.mesh.material.uniforms.edgeWidth.value = width;
+  }
+
   setEnabled(enabled) {
-    this.enabled = enabled;
-    this.guiFields[this.name + "#Enabled"] = enabled;
+    this.options.enabled = enabled;
     if (enabled) {
       let enabledQuantity = false;
       for (let q in this.quantities) {
@@ -267,12 +299,37 @@ class SurfaceMesh {
     }
   }
 
+  getOptions() {
+    return this.options;
+  }
+
+  setOptions(options) {
+    if (options.hasOwnProperty("edgeWidth")) {
+      this.setEdgeWidth(options.edgeWidth);
+    }
+    if (options.hasOwnProperty("edgeColor")) {
+      this.setEdgeColor(options.edgeColor);
+    }
+    if (options.hasOwnProperty("edgesEnabled")) {
+      this.setEdgesEnabled(options.edgesEnabled);
+    }
+    if (options.hasOwnProperty("color")) {
+      this.setColor(options.color);
+    }
+    if (options.hasOwnProperty("smooth")) {
+      this.setSmoothShading(options.smooth);
+    }
+    if (options.hasOwnProperty("enabled")) {
+      this.setEnabled(options.enabled);
+    }
+  }
+
   enableQuantity(q) {
     if (q.isDominantQuantity) {
       for (let pName in this.quantities) {
         let p = this.quantities[pName];
         if (p.isDominantQuantity && pName != q.name) {
-          this.guiFields[p.prefix + "#Enabled"] = false;
+          this.options.enabled = false;
           p.enabled = false;
           this.gp.scene.remove(p.mesh);
         }

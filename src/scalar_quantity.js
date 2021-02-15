@@ -28,12 +28,15 @@ function computeMinMax(values) {
 }
 
 class VertexScalarQuantity {
-  constructor(name, values, parentMesh) {
+  constructor(name, values, parentMesh, options = {}) {
     this.parent = parentMesh;
     this.gp = this.parent.gp;
     this.values = values;
     this.name = name;
-    this.enabled = false;
+
+    this.options = { enabled: false, colormap: "viridis" };
+    Object.assign(this.options, options);
+    this.setOptions(this.options);
 
     this.isDominantQuantity = true;
 
@@ -50,6 +53,7 @@ class VertexScalarQuantity {
     // build a three.js mesh to visualize the function
     this.mesh = new Mesh(this.parent.mesh.geometry.clone(), functionMaterial);
     this.initializeFunctionValues();
+    this.applyColorMap(this.options.colormap);
 
     // Copy some attributes from parent
     this.mesh.geometry.attributes.position = this.parent.mesh.geometry.attributes.position;
@@ -58,23 +62,20 @@ class VertexScalarQuantity {
     this.mesh.material.uniforms.edgeColor = this.parent.mesh.material.uniforms.edgeColor;
   }
 
-  initGui(guiFields, guiFolder) {
+  initGui(guiFolder) {
     this.prefix = this.parent.name + "#" + this.name;
-    this.guiFields = guiFields;
 
-    guiFields[this.prefix + "#Enabled"] = false;
     guiFolder
-      .add(guiFields, this.prefix + "#Enabled")
+      .add(this.options, "enabled")
       .onChange((e) => {
         this.setEnabled(e);
       })
       .listen()
       .name("Enabled");
 
-    guiFields[this.prefix + "#ColorMap"] = "viridis";
-    this.applyColorMap(guiFields[this.prefix + "#ColorMap"]);
+    this.applyColorMap(this.options.colormap);
     guiFolder
-      .add(guiFields, this.prefix + "#ColorMap", availableColorMaps)
+      .add(this.options, "colormap", availableColorMaps)
       .onChange((cm) => {
         this.applyColorMap(cm);
       })
@@ -83,8 +84,7 @@ class VertexScalarQuantity {
   }
 
   setEnabled(enabled) {
-    this.guiFields[this.prefix + "#Enabled"] = enabled;
-    this.enabled = enabled;
+    this.options.enabled = enabled;
     if (enabled) {
       this.parent.enableQuantity(this);
     } else {
@@ -93,7 +93,7 @@ class VertexScalarQuantity {
   }
 
   setColorMap(cm) {
-    this.guiFields[this.prefix + "#ColorMap"] = cm;
+    this.options.colormap = cm;
     this.applyColorMap(cm);
   }
 
@@ -119,6 +119,19 @@ class VertexScalarQuantity {
     );
   }
 
+  getOptions() {
+    return this.options;
+  }
+
+  setOptions(options) {
+    if (options.hasOwnProperty("colormap")) {
+      this.options.colormap = options.colormap;
+    }
+    if (options.hasOwnProperty("enabled")) {
+      this.options.enabled = options.enabled;
+    }
+  }
+
   getVertexValue(iV) {
     return this.gp.prettyScalar(this.values[iV]);
   }
@@ -133,12 +146,14 @@ class VertexScalarQuantity {
 }
 
 class PointCloudScalarQuantity {
-  constructor(name, values, parentCloud) {
+  constructor(name, values, parentCloud, options = {}) {
     this.parent = parentCloud;
     this.gp = this.parent.gp;
     this.values = values;
     this.name = name;
-    this.enabled = false;
+
+    this.options = { enabled: false, colormap: "viridis" };
+    this.setOptions(options);
 
     this.isDominantQuantity = true;
 
@@ -166,25 +181,22 @@ class PointCloudScalarQuantity {
     this.mesh.instanceMatrix = this.parent.mesh.instanceMatrix;
 
     this.initializeFunctionValues();
+    this.applyColorMap(this.options.colormap);
   }
 
-  initGui(guiFields, guiFolder) {
+  initGui(guiFolder) {
     this.prefix = this.parent.name + "#" + this.name;
-    this.guiFields = guiFields;
 
-    guiFields[this.prefix + "#Enabled"] = false;
     guiFolder
-      .add(guiFields, this.prefix + "#Enabled")
+      .add(this.options, "enabled")
       .onChange((e) => {
         this.setEnabled(e);
       })
       .listen()
       .name("Enabled");
 
-    guiFields[this.prefix + "#ColorMap"] = "viridis";
-    this.applyColorMap(guiFields[this.prefix + "#ColorMap"]);
     guiFolder
-      .add(guiFields, this.prefix + "#ColorMap", availableColorMaps)
+      .add(this.options, "colormap", availableColorMaps)
       .onChange((cm) => {
         this.applyColorMap(cm);
       })
@@ -193,8 +205,7 @@ class PointCloudScalarQuantity {
   }
 
   setEnabled(enabled) {
-    this.guiFields[this.prefix + "#Enabled"] = enabled;
-    this.enabled = enabled;
+    this.options.enabled = enabled;
     if (enabled) {
       this.parent.enableQuantity(this);
     } else {
@@ -221,6 +232,19 @@ class PointCloudScalarQuantity {
     this.mesh.material.uniforms.colormap.value = new TextureLoader().load(
       this.gp.geopticPath + "/img/colormaps/" + cm + ".png"
     );
+  }
+
+  getOptions() {
+    return this.options;
+  }
+
+  setOptions(options) {
+    if (options.hasOwnProperty("colormap")) {
+      this.options.colormap = options.colormap;
+    }
+    if (options.hasOwnProperty("enabled")) {
+      this.options.enabled = options.enabled;
+    }
   }
 
   getVertexValue(iV) {

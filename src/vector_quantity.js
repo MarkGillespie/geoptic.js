@@ -20,7 +20,7 @@ import {
 import { getNextUniqueColor } from "./color_utils.js";
 
 class VertexVectorQuantity {
-  constructor(name, values, parentMesh) {
+  constructor(name, values, parentMesh, options = {}) {
     this.parent = parentMesh;
     this.gp = this.parent.gp;
     this.values = values;
@@ -36,6 +36,12 @@ class VertexVectorQuantity {
 
     // build a three.js mesh to visualize the function
     this.mesh = this.constructArrowMesh(this.parent.coords, values);
+
+    this.options = { enabled: true, radius: 0.5 };
+    this.options.color = options.color || getNextUniqueColor();
+    // copy anything set in options to this.options
+    Object.assign(this.options, { options });
+    this.setOptions(this.options);
   }
 
   constructArrowMesh(bases, directions) {
@@ -111,33 +117,27 @@ class VertexVectorQuantity {
     return arrows;
   }
 
-  initGui(guiFields, guiFolder) {
+  initGui(guiFolder) {
     this.prefix = this.parent.name + "#" + this.name;
-    this.guiFields = guiFields;
 
-    guiFields[this.prefix + "#Enabled"] = false;
     guiFolder
-      .add(guiFields, this.prefix + "#Enabled")
+      .add(this.options, "enabled")
       .onChange((e) => {
         this.setEnabled(e);
       })
       .listen()
       .name("Enabled");
 
-    guiFields[this.name + "#Color"] = getNextUniqueColor();
-    this.setColor(guiFields[this.name + "#Color"]);
     guiFolder
-      .addColor(guiFields, this.name + "#Color")
+      .addColor(this.options, "color")
       .onChange((c) => {
         this.setColor(c);
       })
       .listen()
       .name("Color");
 
-    guiFields[this.name + "#Radius"] = 1;
-    this.setRadius(guiFields[this.name + "#Radius"]);
     guiFolder
-      .add(guiFields, this.name + "#Radius")
+      .add(this.options, "radius")
       .min(0)
       .max(5)
       .step(0.05)
@@ -149,24 +149,41 @@ class VertexVectorQuantity {
   }
 
   setColor(color) {
+    this.options.color = color;
     let c = new Vector3(color[0] / 255, color[1] / 255, color[2] / 255);
     this.torsoMesh.material.uniforms.color.value = c;
     this.tipMesh.material.uniforms.color.value = c;
   }
 
   setRadius(rad) {
+    this.options.radius = rad;
     this.torsoMesh.material.uniforms.scale.value = rad * 0.05;
     this.tipMesh.material.uniforms.scale.value = rad * 0.05;
   }
 
   setEnabled(enabled) {
-    this.guiFields[this.prefix + "#Enabled"] = enabled;
-    this.enabled = enabled;
+    this.options.enabled = enabled;
     if (enabled) {
       this.parent.enableQuantity(this);
     } else {
       this.parent.disableQuantity(this);
     }
+  }
+
+  setOptions(options) {
+    if (options.hasOwnProperty("color")) {
+      this.setColor(options.color);
+    }
+    if (options.hasOwnProperty("radius")) {
+      this.setRadius(options.radius);
+    }
+    if (options.hasOwnProperty("enabled")) {
+      this.setEnabled(options.enabled);
+    }
+  }
+
+  getOptions() {
+    return this.options;
   }
 
   getVertexValue(iV) {
