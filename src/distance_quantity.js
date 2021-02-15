@@ -47,7 +47,7 @@ class VertexDistanceQuantity {
     // build a three.js mesh to visualize the function
     this.mesh = new Mesh(this.parent.mesh.geometry.clone(), functionMaterial);
     this.mesh.material.uniforms.colormap.value = new TextureLoader().load(
-      this.gp.geopticPath + "/img/colormaps/RdPu.png"
+      this.gp.geopticPath + "/img/colormaps/rdpu.png"
     );
     this.initializeDistances(this.values);
 

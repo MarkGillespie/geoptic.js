@@ -35,10 +35,11 @@ class PointCloud {
     this.guiFolder = undefined;
 
     this.options = { radius: 1, enabled: true };
-    this.options.color = this.options.color || getNextUniqueColor();
+    this.options.color = options.color || getNextUniqueColor();
     Object.assign(this.options, options);
 
     this.setOptions(this.options);
+    console.log(options, this.options);
   }
 
   addScalarQuantity(name, values) {
@@ -95,7 +96,7 @@ class PointCloud {
   }
 
   getOptions() {
-    this.options;
+    return this.options;
   }
 
   setOptions(options) {
