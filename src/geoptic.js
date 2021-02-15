@@ -149,6 +149,8 @@ class Geoptic {
     this.initControls();
     this.initGroundPlane();
     this.addEventListeners();
+
+    this.render();
   }
 
   initDOM() {
@@ -384,8 +386,6 @@ class Geoptic {
         "Curve Networks"
       );
       this.structureGuiCurveNetworks.open();
-    } else {
-      edges = standardizeFaceArray(edges);
     }
 
     if (!edges) {
@@ -393,6 +393,8 @@ class Geoptic {
       for (let iV = 0; iV + 1 < vertexCoordinates.length; iV++) {
         edges.push([iV, iV + 1]);
       }
+    } else {
+      edges = standardizeFaceArray(edges);
     }
 
     // TODO: allocate extra space?
@@ -592,8 +594,8 @@ class Geoptic {
   }
 
   message(str) {
-    let message = document.createElement("div");
     let messageBuffer = document.getElementById("messages");
+    let message = document.createElement("div");
     messageBuffer.insertBefore(message, messageBuffer.firstChild);
     message.innerHTML = str;
   }
