@@ -12,6 +12,11 @@
     grid-auto-flow: column; /* somehow puts items in a row */
 }
 
+/* don't set height to 20px when closed */
+.closed .dat-info-box {
+    height: 0!important;
+}
+
 .half-button {
     display: inline-block;
     margin-bottom: -4px;
@@ -19,8 +24,10 @@
 }
 
 /* when closed, half-buttons should go back to block display */
+/* Also, it shouldn't have any negative margin. That makes its parent sink weirdly */
 .closed .half-button{
     display: block !important;
+    margin-bottom: 0;
 }
 
 .half-button div {
