@@ -15,7 +15,7 @@ import {
   createInstancedScalarFunctionMaterial,
 } from "./shaders.js";
 
-import { availableColorMaps, applyColorMap } from "./color_maps.js";
+import { availableColorMaps } from "./color_maps.js";
 
 function computeMinMax(values) {
   let min = values[0];
@@ -34,10 +34,6 @@ class VertexScalarQuantity {
     this.values = values;
     this.name = name;
 
-    this.options = { enabled: false, colormap: "viridis" };
-    Object.assign(this.options, options);
-    this.setOptions(this.options);
-
     this.isDominantQuantity = true;
 
     [this.dataMin, this.dataMax] = computeMinMax(values);
@@ -53,13 +49,16 @@ class VertexScalarQuantity {
     // build a three.js mesh to visualize the function
     this.mesh = new Mesh(this.parent.mesh.geometry.clone(), functionMaterial);
     this.initializeFunctionValues();
-    this.applyColorMap(this.options.colormap);
 
     // Copy some attributes from parent
     this.mesh.geometry.attributes.position = this.parent.mesh.geometry.attributes.position;
     this.mesh.geometry.attributes.normal = this.parent.mesh.geometry.attributes.normal;
     this.mesh.material.uniforms.edgeWidth = this.parent.mesh.material.uniforms.edgeWidth;
     this.mesh.material.uniforms.edgeColor = this.parent.mesh.material.uniforms.edgeColor;
+
+    this.options = { enabled: false, colormap: "viridis" };
+    Object.assign(this.options, options);
+    this.setOptions(this.options);
   }
 
   initGui(guiFolder) {
@@ -152,9 +151,6 @@ class PointCloudScalarQuantity {
     this.values = values;
     this.name = name;
 
-    this.options = { enabled: false, colormap: "viridis" };
-    this.setOptions(options);
-
     this.isDominantQuantity = true;
 
     [this.dataMin, this.dataMax] = computeMinMax(values);
@@ -181,7 +177,10 @@ class PointCloudScalarQuantity {
     this.mesh.instanceMatrix = this.parent.mesh.instanceMatrix;
 
     this.initializeFunctionValues();
-    this.applyColorMap(this.options.colormap);
+
+    this.options = { enabled: false, colormap: "viridis" };
+    Object.assign(this.options, options);
+    this.setOptions(this.options);
   }
 
   initGui(guiFolder) {
@@ -228,6 +227,11 @@ class PointCloudScalarQuantity {
     );
   }
 
+  setColorMap(cm) {
+    this.colormap = cm;
+    this.applyColorMap(cm);
+  }
+
   applyColorMap(cm) {
     this.mesh.material.uniforms.colormap.value = new TextureLoader().load(
       this.gp.geopticPath + "/img/colormaps/" + cm + ".png"
@@ -240,7 +244,7 @@ class PointCloudScalarQuantity {
 
   setOptions(options) {
     if (options.hasOwnProperty("colormap")) {
-      this.setColormap(options.colormap);
+      this.setColorMap(options.colormap);
     }
     if (options.hasOwnProperty("enabled")) {
       this.setEnabled(options.enabled);

@@ -12,7 +12,7 @@ import {
 
 import { createVertexDistanceFunctionMaterial } from "./shaders.js";
 
-import { availableColorMaps, applyColorMap } from "./color_maps.js";
+import { availableColorMaps } from "./color_maps.js";
 
 function computeMinMax(values) {
   let min = values[0];

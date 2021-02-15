@@ -10,7 +10,6 @@ import {
 } from "https://unpkg.com/three@0.125.1/build/three.module.js";
 
 import { VertexParamCheckerboard, VertexParamGrid } from "./shaders.js";
-import { applyColorMap } from "./color_maps.js";
 
 class VertexParameterizationQuantity {
   constructor(name, coords, parentMesh, options = {}) {

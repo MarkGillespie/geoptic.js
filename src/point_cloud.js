@@ -39,7 +39,6 @@ class PointCloud {
     Object.assign(this.options, options);
 
     this.setOptions(this.options);
-    console.log(options, this.options);
   }
 
   addScalarQuantity(name, values) {

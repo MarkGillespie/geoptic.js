@@ -164,7 +164,6 @@ class Geoptic {
       this.container.style.left = 0;
       this.container.style.top = 0;
       this.container.style["z-index"] = 0;
-      console.log(this.container);
     } else {
       this.container.style.height = "100%";
       this.container.style.position = "relative";
