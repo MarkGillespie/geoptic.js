@@ -2906,10 +2906,20 @@
 
     initDOM() {
       this.container = document.createElement("div");
-      this.container.style.height = "100%";
       this.container.style.overflow = "hidden";
-      this.container.style.position = "relative";
       this.parent.appendChild(this.container);
+      if (this.parent == document.body) {
+        this.container.style.height = "100vh";
+        this.container.style.width = "100vw";
+        this.container.style.position = "absolute";
+        this.container.style.left = 0;
+        this.container.style.top = 0;
+        this.container.style["z-index"] = 0;
+        console.log(this.container);
+      } else {
+        this.container.style.height = "100%";
+        this.container.style.position = "relative";
+      }
 
       if (this.doPicks) {
         // <div id="selection-info">
@@ -2958,8 +2968,8 @@
       );
       this.groundPlane = new Reflector_js.Reflector(new THREE.PlaneGeometry(100, 100), {
         clipBias: 0.003,
-        textureWidth: this.parent.offsetWidth * window.devicePixelRatio,
-        textureHeight: this.parent.offsetHeight * window.devicePixelRatio,
+        textureWidth: this.container.offsetWidth * window.devicePixelRatio,
+        textureHeight: this.container.offsetHeight * window.devicePixelRatio,
         color: 0x777777,
       });
       this.groundPlane.material.vertexShader = groundPlaneVertexShader;
@@ -3010,7 +3020,10 @@
       });
       this.renderer.setPixelRatio(window.devicePixelRatio);
       this.renderer.setClearColor(0xffffff, 1.0);
-      this.renderer.setSize(this.parent.offsetWidth, this.parent.offsetHeight);
+      this.renderer.setSize(
+        this.container.offsetWidth,
+        this.container.offsetHeight
+      );
       this.container.appendChild(this.renderer.domElement);
 
       if (this.doPicks) {
@@ -3020,8 +3033,8 @@
         this.pickRenderer.setPixelRatio(window.devicePixelRatio);
         this.pickRenderer.setClearColor(0xffffff, 1.0);
         this.pickRenderer.setSize(
-          this.parent.offsetWidth,
-          this.parent.offsetHeight
+          this.container.offsetWidth,
+          this.container.offsetHeight
         );
         // TODO: do I need to do this?
         container.appendChild(this.pickRenderer.domElement);
@@ -3054,7 +3067,7 @@
 
     initCamera() {
       const fov = 45.0;
-      const aspect = this.parent.offsetWidth / this.parent.offsetHeight;
+      const aspect = this.container.offsetWidth / this.container.offsetHeight;
       const near = 0.01;
       const far = 1000;
       const eyeZ = 3.5;
@@ -3302,10 +3315,14 @@
     }
 
     onWindowResize() {
-      this.camera.aspect = this.parent.offsetWidth / this.parent.offsetHeight;
+      this.camera.aspect =
+        this.container.offsetWidth / this.container.offsetHeight;
       this.camera.updateProjectionMatrix();
 
-      this.renderer.setSize(this.parent.offsetWidth, this.parent.offsetHeight);
+      this.renderer.setSize(
+        this.container.offsetWidth,
+        this.container.offsetHeight
+      );
       this.controls.handleResize();
       this.render();
     }
@@ -3313,9 +3330,9 @@
     onMouseClick(event) {
       if (
         event.clientX >= 0 &&
-        event.clientX <= this.parent.offsetWidth &&
+        event.clientX <= this.container.offsetWidth &&
         event.clientY >= 0 &&
-        event.clientY <= this.parent.offsetHeight
+        event.clientY <= this.container.offsetHeight
       ) {
         this.pick(event.clientX, event.clientY);
       }
@@ -3335,10 +3352,10 @@
 
     render() {
       // set viewport and render mesh
-      let width = this.parent.offsetWidth;
+      let width = this.container.offsetWidth;
 
-      this.renderer.setViewport(0.0, 0.0, width, this.parent.offsetHeight);
-      this.renderer.setScissor(0.0, 0.0, width, this.parent.offsetHeight);
+      this.renderer.setViewport(0.0, 0.0, width, this.container.offsetHeight);
+      this.renderer.setScissor(0.0, 0.0, width, this.container.offsetHeight);
       this.renderer.setScissorTest(true);
       this.renderer.render(this.scene, this.camera);
     }
