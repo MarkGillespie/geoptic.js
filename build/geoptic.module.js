@@ -161,6 +161,72 @@ function createVertexScalarFunctionMaterial(tex_r, tex_g, tex_b, tex_k) {
   return Material;
 }
 
+function createVertexDistanceFunctionMaterial(tex_r, tex_g, tex_b, tex_k) {
+  let vertexShader = `
+        attribute vec3 barycoord;
+        attribute float value;
+
+        varying vec2 Point;
+        varying vec3 Barycoord;
+        varying float Value;
+
+        void main()
+        {
+            vec3 vNormal = ( mat3( modelViewMatrix ) * normal );
+            vNormal = normalize(vNormal);
+
+            // pull slightly inward, to reduce sampling artifacts near edges
+            Point.x = 0.93 * vNormal.x * 0.5 + 0.5;
+            Point.y = 0.93 * vNormal.y * 0.5 + 0.5;
+
+            Barycoord = barycoord;
+            Value = value;
+
+            gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+
+        }
+    `;
+
+  let fragmentShader = `
+        ${matcapIncludes}
+        uniform sampler2D colormap; // Matcap texture
+        uniform vec3 edgeColor;
+        uniform float edgeWidth;
+        uniform float scale;
+
+        varying vec2 Point;
+        varying vec3 Barycoord;
+        varying float Value;
+
+        ${common}
+
+        void main(void){
+
+            vec3 Color = sRGBToLinear(texture2D(colormap, vec2(mod(Value*scale,1.), 0.5))).rgb;
+
+            float alpha = getEdgeFactor(Barycoord, vec3(1.,1.,1.), edgeWidth);
+            gl_FragColor = lightSurfaceMat((1.-alpha) * Color + alpha * edgeColor, Point);
+        }
+    `;
+  let Material = new ShaderMaterial({
+    uniforms: {
+      Matcap_r: { value: tex_r },
+      Matcap_g: { value: tex_g },
+      Matcap_b: { value: tex_b },
+      Matcap_k: { value: tex_k },
+      colormap: { value: undefined },
+      edgeColor: { value: new Vector3(0, 0, 0) },
+      edgeWidth: { value: 0 },
+      scale: { value: 1 },
+    },
+    vertexShader,
+    fragmentShader,
+  });
+  Material.side = DoubleSide;
+
+  return Material;
+}
+
 function VertexParamCheckerboard(tex_r, tex_g, tex_b, tex_k) {
   let vertexShader = `
         attribute vec3 barycoord;
@@ -837,7 +903,8 @@ let colorMaps = {
     rainbow : ["#8000ff","#7e03ff","#7c06ff","#7a09ff","#780dff","#7610ff","#7413ff","#7216ff","#7019ff","#6e1cff","#6c1fff","#6a22fe","#6826fe","#6629fe","#642cfe","#622ffe","#6032fe","#5e35fe","#5c38fd","#5a3bfd","#583efd","#5641fd","#5444fd","#5247fc","#504afc","#4e4dfc","#4c50fc","#4a53fb","#4856fb","#4659fb","#445cfb","#425ffa","#4062fa","#3e65fa","#3c68f9","#3a6bf9","#386df9","#3670f8","#3473f8","#3079f7","#2e7bf7","#2c7ef7","#2a81f6","#2884f6","#2686f5","#2489f5","#228cf4","#208ef4","#1e91f3","#1c93f3","#1a96f3","#1898f2","#169bf2","#149df1","#12a0f1","#10a2f0","#0ea5ef","#0ca7ef","#0aa9ee","#08acee","#06aeed","#04b0ed","#02b3ec","#01b5eb","#03b7eb","#05b9ea","#07bbea","#09bee9","#0bc0e8","#0dc2e8","#0fc4e7","#11c6e6","#13c8e6","#15cae5","#17cbe4","#19cde4","#1bcfe3","#1fd3e1","#21d5e1","#23d6e0","#25d8df","#27dade","#29dbde","#2bdddd","#2ddedc","#2fe0db","#31e1da","#33e3da","#35e4d9","#37e6d8","#39e7d7","#3be8d6","#3dead5","#3febd5","#41ecd4","#43edd3","#45eed2","#47efd1","#49f1d0","#4bf2cf","#4df3ce","#4ff3cd","#51f4cc","#53f5cb","#55f6cb","#57f7ca","#59f8c9","#5bf8c8","#5df9c7","#5ffac6","#61fac5","#63fbc4","#65fbc3","#67fcc2","#69fcc1","#6bfdc0","#6ffebe","#71febc","#73febb","#75feba","#77ffb9","#79ffb8","#7bffb7","#7dffb6","#7fffb5","#81ffb4","#83ffb3","#85ffb2","#87ffb0","#89ffaf","#8bfeae","#8dfead","#8ffeac","#91feab","#93fda9","#95fda8","#97fca7","#99fca6","#9bfba5","#9dfba4","#9ffaa2","#a1faa1","#a3f9a0","#a5f89f","#a7f89d","#a9f79c","#abf69b","#adf59a","#aff498","#b1f397","#b3f396","#b5f295","#b7f193","#b9ef92","#bded8f","#bfec8e","#c1eb8d","#c3ea8c","#c5e88a","#c7e789","#c9e688","#cbe486","#cde385","#cfe184","#d1e082","#d3de81","#d5dd80","#d7db7e","#d9da7d","#dbd87b","#ddd67a","#dfd579","#e1d377","#e3d176","#e5cf74","#e7cd73","#e9cb72","#ebca70","#edc86f","#efc66d","#f1c46c","#f3c26b","#f5c069","#f7be68","#f9bb66","#fbb965","#fdb763","#ffb562","#ffb360","#ffb05f","#ffae5e","#ffac5c","#ffa759","#ffa558","#ffa256","#ffa055","#ff9d53","#ff9b52","#ff9850","#ff964f","#ff934d","#ff914c","#ff8e4a","#ff8c49","#ff8947","#ff8646","#ff8444","#ff8143","#ff7e41","#ff7b40","#ff793e","#ff763d","#ff733b","#ff703a","#ff6d38","#ff6b37","#ff6835","#ff6533","#ff6232","#ff5f30","#ff5c2f","#ff592d","#ff562c","#ff532a","#ff5029","#ff4d27","#ff4a26","#ff4724","#ff4422","#ff4121","#ff3e1f","#ff381c","#ff351b","#ff3219","#ff2f18","#ff2c16","#ff2914","#ff2613","#ff2211","#ff1f10","#ff1c0e","#ff190d","#ff160b","#ff1309","#ff1008","#ff0d06","#ff0905","#ff0603","#ff0302","#ff0000"],
 jet : ["#000080","#000084","#000089","#00008d","#000092","#000096","#00009b","#00009f","#0000a4","#0000a8","#0000ad","#0000b2","#0000b6","#0000bb","#0000bf","#0000c4","#0000c8","#0000cd","#0000d1","#0000d6","#0000da","#0000df","#0000e4","#0000e8","#0000ed","#0000f1","#0000f6","#0000fa","#0000ff","#0000ff","#0000ff","#0000ff","#0001ff","#0005ff","#0009ff","#000dff","#0011ff","#0015ff","#0019ff","#0021ff","#0025ff","#0029ff","#002dff","#0031ff","#0035ff","#0039ff","#003dff","#0041ff","#0045ff","#0049ff","#004dff","#0051ff","#0055ff","#0059ff","#005dff","#0061ff","#0065ff","#0069ff","#006dff","#0071ff","#0075ff","#0079ff","#007dff","#0081ff","#0085ff","#0089ff","#008dff","#0091ff","#0095ff","#0099ff","#009dff","#00a1ff","#00a5ff","#00a9ff","#00adff","#00b1ff","#00b5ff","#00bdff","#00c1ff","#00c5ff","#00c9ff","#00cdff","#00d1ff","#00d5ff","#00d9ff","#00ddfe","#00e1fb","#00e5f8","#02e9f4","#06edf1","#09f1ee","#0cf5eb","#0ff9e7","#13fde4","#16ffe1","#19ffde","#1cffdb","#1fffd7","#23ffd4","#26ffd1","#29ffce","#2cffca","#30ffc7","#33ffc4","#36ffc1","#39ffbe","#3cffba","#40ffb7","#43ffb4","#46ffb1","#49ffad","#4dffaa","#50ffa7","#53ffa4","#56ffa0","#5aff9d","#60ff97","#63ff94","#66ff90","#6aff8d","#6dff8a","#70ff87","#73ff83","#77ff80","#7aff7d","#7dff7a","#80ff77","#83ff73","#87ff70","#8aff6d","#8dff6a","#90ff66","#94ff63","#97ff60","#9aff5d","#9dff5a","#a0ff56","#a4ff53","#a7ff50","#aaff4d","#adff49","#b1ff46","#b4ff43","#b7ff40","#baff3c","#beff39","#c1ff36","#c4ff33","#c7ff30","#caff2c","#ceff29","#d1ff26","#d4ff23","#d7ff1f","#deff19","#e1ff16","#e4ff13","#e7ff0f","#ebff0c","#eeff09","#f1fc06","#f4f802","#f8f500","#fbf100","#feed00","#ffea00","#ffe600","#ffe200","#ffde00","#ffdb00","#ffd700","#ffd300","#ffd000","#ffcc00","#ffc800","#ffc400","#ffc100","#ffbd00","#ffb900","#ffb600","#ffb200","#ffae00","#ffab00","#ffa700","#ffa300","#ff9f00","#ff9c00","#ff9800","#ff9400","#ff9100","#ff8d00","#ff8900","#ff8200","#ff7e00","#ff7a00","#ff7700","#ff7300","#ff6f00","#ff6c00","#ff6800","#ff6400","#ff6000","#ff5d00","#ff5900","#ff5500","#ff5200","#ff4e00","#ff4a00","#ff4700","#ff4300","#ff3f00","#ff3b00","#ff3800","#ff3400","#ff3000","#ff2d00","#ff2900","#ff2500","#ff2200","#ff1e00","#ff1a00","#ff1600","#ff1300","#fa0f00","#f60b00","#f10800","#ed0400","#e80000","#e40000","#df0000","#da0000","#d10000","#cd0000","#c80000","#c40000","#bf0000","#bb0000","#b60000","#b20000","#ad0000","#a80000","#a40000","#9f0000","#9b0000","#960000","#920000","#8d0000","#890000","#840000","#800000"],
     reds : ["#fff5f0","#fff4ef","#fff4ee","#fff3ed","#fff2ec","#fff2eb","#fff1ea","#fff0e9","#fff0e8","#ffefe8","#ffeee7","#ffeee6","#ffede5","#ffece4","#ffece3","#ffebe2","#feeae1","#feeae0","#fee9df","#fee8de","#fee8dd","#fee7dc","#fee7db","#fee6da","#fee5d9","#fee5d8","#fee4d8","#fee3d7","#fee3d6","#fee2d5","#fee1d4","#fee1d3","#fee0d2","#fedfd0","#fedecf","#fedccd","#fedbcc","#fedaca","#fed9c9","#fdd7c6","#fdd5c4","#fdd4c2","#fdd3c1","#fdd2bf","#fdd1be","#fdd0bc","#fdcebb","#fdcdb9","#fdccb8","#fdcbb6","#fdcab5","#fdc9b3","#fdc7b2","#fdc6b0","#fdc5ae","#fcc4ad","#fcc3ab","#fcc2aa","#fcc1a8","#fcbfa7","#fcbea5","#fcbda4","#fcbca2","#fcbba1","#fcb99f","#fcb89e","#fcb79c","#fcb69b","#fcb499","#fcb398","#fcb296","#fcb095","#fcaf93","#fcae92","#fcad90","#fcab8f","#fcaa8d","#fca78b","#fca689","#fca588","#fca486","#fca285","#fca183","#fca082","#fc9e80","#fc9d7f","#fc9c7d","#fc9b7c","#fc997a","#fc9879","#fc9777","#fc9576","#fc9474","#fc9373","#fc9272","#fc9070","#fc8f6f","#fc8e6e","#fc8d6d","#fc8b6b","#fc8a6a","#fc8969","#fc8767","#fc8666","#fc8565","#fc8464","#fc8262","#fc8161","#fc8060","#fc7f5f","#fb7d5d","#fb7c5c","#fb7b5b","#fb7a5a","#fb7858","#fb7757","#fb7555","#fb7353","#fb7252","#fb7151","#fb7050","#fb6e4e","#fb6d4d","#fb6c4c","#fb6b4b","#fb694a","#fa6849","#fa6648","#fa6547","#f96346","#f96245","#f96044","#f85f43","#f85d42","#f75c41","#f75b40","#f7593f","#f6583e","#f6563d","#f6553c","#f5533b","#f5523a","#f4503a","#f44f39","#f44d38","#f34c37","#f34a36","#f34935","#f24734","#f24633","#f14432","#f14331","#f14130","#f0402f","#f03d2d","#ef3c2c","#ee3a2c","#ed392b","#ec382b","#eb372a","#ea362a","#e93529","#e83429","#e63328","#e53228","#e43027","#e32f27","#e22e27","#e12d26","#e02c26","#de2b25","#dd2a25","#dc2924","#db2824","#da2723","#d92523","#d82422","#d72322","#d52221","#d42121","#d32020","#d21f20","#d11e1f","#d01d1f","#cf1c1f","#ce1a1e","#cc191e","#cb181d","#ca181d","#c9181d","#c8171c","#c7171c","#c4161c","#c3161b","#c2161b","#c1161b","#bf151b","#be151a","#bd151a","#bc141a","#bb141a","#b91419","#b81419","#b71319","#b61319","#b51318","#b31218","#b21218","#b11218","#b01217","#af1117","#ad1117","#ac1117","#ab1016","#aa1016","#a91016","#a81016","#a60f15","#a50f15","#a30f15","#a10e15","#9f0e14","#9d0d14","#9c0d14","#9a0c14","#980c13","#960b13","#940b13","#920a13","#900a12","#8e0912","#8a0812","#880811","#860811","#840711","#820711","#800610","#7e0610","#7c0510","#7a0510","#79040f","#77040f","#75030f","#73030f","#71020e","#6f020e","#6d010e","#6b010e","#69000d","#67000d"],
-phase : ["#a8780d","#a9770f","#ab7611","#ac7513","#ae7414","#af7316","#b17218","#b27119","#b3701b","#b56f1d","#b66e1e","#b76d20","#b96c22","#ba6b23","#bb6a25","#bd6926","#be6828","#bf672a","#c0662b","#c1652d","#c2642e","#c46230","#c56132","#c66033","#c75f35","#c85e37","#c95d38","#ca5c3a","#cb5a3c","#cc593e","#cd583f","#ce5741","#cf5643","#d05445","#d05347","#d15249","#d2514b","#d34f4d","#d44e4f","#d54b53","#d64a55","#d74957","#d8475a","#d8465c","#d9455e","#d94361","#da4263","#db4066","#db3f68","#dc3d6b","#dc3c6d","#dd3a70","#dd3973","#dd3876","#de3678","#de357b","#de337e","#de3281","#df3184","#df2f87","#df2e8a","#df2d8d","#df2b90","#df2a93","#de2997","#de289a","#de289d","#de27a0","#dd26a3","#dd26a6","#dc25a9","#dc25ad","#db25b0","#da25b3","#da26b6","#d926b9","#d827bc","#d628c1","#d529c4","#d42ac7","#d32bc9","#d22dcc","#d12ece","#d02fd0","#cf31d3","#cd32d5","#cc34d7","#cb35d9","#c937db","#c839dd","#c63adf","#c53ce1","#c33ee2","#c23fe4","#c041e5","#be43e7","#bd45e8","#bb46e9","#b948eb","#b84aec","#b64bed","#b44dee","#b24fef","#b050ef","#ae52f0","#ac54f1","#aa55f1","#a957f2","#a759f3","#a45af3","#a25cf3","#a05df4","#9e5ff4","#9c60f4","#9a62f4","#9863f4","#9366f4","#9168f4","#8f69f4","#8c6bf3","#8a6cf3","#876df3","#856ff2","#8270f1","#8071f1","#7d73f0","#7b74ef","#7875ef","#7677ee","#7378ed","#7079ec","#6e7aeb","#6b7be9","#687ce8","#667ee7","#637fe6","#6080e4","#5d81e3","#5a82e1","#5883df","#5584de","#5285dc","#4f86da","#4d87d8","#4a87d7","#4788d5","#4589d3","#428ad1","#408acf","#3d8bcd","#3b8ccb","#388cc9","#368dc7","#348ec4","#308fc0","#2e8fbe","#2c90bc","#2a90ba","#2891b8","#2791b6","#2591b4","#2492b2","#2392b0","#2192ae","#2093ac","#1f93aa","#1e93a8","#1d94a6","#1c94a4","#1b94a2","#1a94a0","#19959e","#19959c","#18959a","#179598","#169696","#159694","#149692","#149690","#13978e","#12978c","#11978a","#109788","#0f9786","#0e9884","#0d9882","#0d9880","#0c987e","#0c987c","#0b9979","#0b9977","#0b9975","#0d9970","#0e996e","#0f9a6b","#119a69","#139a66","#159a63","#179a61","#199a5e","#1c9a5b","#1f9a58","#219a55","#249a52","#279a4f","#2b9a4c","#2e9a49","#319946","#359943","#389940","#3c993c","#409839","#439836","#479732","#4b972f","#4f962c","#539629","#569526","#5a9423","#5e9420","#61931e","#65921b","#689119","#6b9017","#6f9016","#728f14","#748e13","#778d12","#7a8c11","#7d8b10","#7f8b0f","#84890e","#86880e","#88870e","#8b860d","#8d850d","#8f840d","#91830d","#93830d","#95820d","#97810d","#99800d","#9b7f0d","#9d7e0d","#9f7d0d","#a17c0d","#a27b0d","#a47a0d","#a6790d","#a8780d"],
+    phase : ["#a8780d","#a9770f","#ab7611","#ac7513","#ae7414","#af7316","#b17218","#b27119","#b3701b","#b56f1d","#b66e1e","#b76d20","#b96c22","#ba6b23","#bb6a25","#bd6926","#be6828","#bf672a","#c0662b","#c1652d","#c2642e","#c46230","#c56132","#c66033","#c75f35","#c85e37","#c95d38","#ca5c3a","#cb5a3c","#cc593e","#cd583f","#ce5741","#cf5643","#d05445","#d05347","#d15249","#d2514b","#d34f4d","#d44e4f","#d54b53","#d64a55","#d74957","#d8475a","#d8465c","#d9455e","#d94361","#da4263","#db4066","#db3f68","#dc3d6b","#dc3c6d","#dd3a70","#dd3973","#dd3876","#de3678","#de357b","#de337e","#de3281","#df3184","#df2f87","#df2e8a","#df2d8d","#df2b90","#df2a93","#de2997","#de289a","#de289d","#de27a0","#dd26a3","#dd26a6","#dc25a9","#dc25ad","#db25b0","#da25b3","#da26b6","#d926b9","#d827bc","#d628c1","#d529c4","#d42ac7","#d32bc9","#d22dcc","#d12ece","#d02fd0","#cf31d3","#cd32d5","#cc34d7","#cb35d9","#c937db","#c839dd","#c63adf","#c53ce1","#c33ee2","#c23fe4","#c041e5","#be43e7","#bd45e8","#bb46e9","#b948eb","#b84aec","#b64bed","#b44dee","#b24fef","#b050ef","#ae52f0","#ac54f1","#aa55f1","#a957f2","#a759f3","#a45af3","#a25cf3","#a05df4","#9e5ff4","#9c60f4","#9a62f4","#9863f4","#9366f4","#9168f4","#8f69f4","#8c6bf3","#8a6cf3","#876df3","#856ff2","#8270f1","#8071f1","#7d73f0","#7b74ef","#7875ef","#7677ee","#7378ed","#7079ec","#6e7aeb","#6b7be9","#687ce8","#667ee7","#637fe6","#6080e4","#5d81e3","#5a82e1","#5883df","#5584de","#5285dc","#4f86da","#4d87d8","#4a87d7","#4788d5","#4589d3","#428ad1","#408acf","#3d8bcd","#3b8ccb","#388cc9","#368dc7","#348ec4","#308fc0","#2e8fbe","#2c90bc","#2a90ba","#2891b8","#2791b6","#2591b4","#2492b2","#2392b0","#2192ae","#2093ac","#1f93aa","#1e93a8","#1d94a6","#1c94a4","#1b94a2","#1a94a0","#19959e","#19959c","#18959a","#179598","#169696","#159694","#149692","#149690","#13978e","#12978c","#11978a","#109788","#0f9786","#0e9884","#0d9882","#0d9880","#0c987e","#0c987c","#0b9979","#0b9977","#0b9975","#0d9970","#0e996e","#0f9a6b","#119a69","#139a66","#159a63","#179a61","#199a5e","#1c9a5b","#1f9a58","#219a55","#249a52","#279a4f","#2b9a4c","#2e9a49","#319946","#359943","#389940","#3c993c","#409839","#439836","#479732","#4b972f","#4f962c","#539629","#569526","#5a9423","#5e9420","#61931e","#65921b","#689119","#6b9017","#6f9016","#728f14","#748e13","#778d12","#7a8c11","#7d8b10","#7f8b0f","#84890e","#86880e","#88870e","#8b860d","#8d850d","#8f840d","#91830d","#93830d","#95820d","#97810d","#99800d","#9b7f0d","#9d7e0d","#9f7d0d","#a17c0d","#a27b0d","#a47a0d","#a6790d","#a8780d"],
+    stripes : ["#fee6e3","#fde6e2","#fde5e2","#fde4e1","#fde4e0","#fde3e0","#fde2df","#fde1de","#fde1de","#faa5b7","#faa3b6","#faa2b6","#faa1b6","#faa1b6","#faa0b5","#fa9eb5","#fa9db4","#fdd9d6","#fdd8d5","#fdd8d5","#fdd7d4","#fdd7d3","#fdd6d2","#fdd5d1","#fdd4d0","#f991b0","#f991b0","#f98faf","#f98dae","#f98bae","#f98aad","#f98aad","#f988ad","#f986ac","#fcccc8","#fcccc7","#fcccc7","#fccbc6","#fccac5","#fcc9c4","#fcc8c3","#fcc7c3","#f87aa8","#f87aa8","#f878a7","#f877a6","#f875a6","#f875a6","#f873a5","#f871a4","#fcc0bf","#fcbfbe","#fcbebe","#fcbcbd","#fcbcbd","#fbbbbd","#fbbabd","#fbb9bc","#fbb8bc","#f666a1","#f564a0","#f462a0","#f462a0","#f361a0","#f35f9f","#f25d9f","#f25d9f","#fbafba","#fbafba","#fbaeb9","#fbadb9","#fbacb9","#fbacb9","#fbaab8","#fba9b8","#ec529d","#ec529d","#eb509c","#ea4f9c","#ea4d9c","#ea4d9c","#e94b9c","#e84a9b","#e84a9b","#faa0b5","#faa0b5","#fa9eb5","#fa9db4","#fa9bb4","#fa9bb4","#fa99b3","#fa97b2","#e23e99","#e23e99","#e13d99","#e13b98","#e03a98","#e03a98","#df3898","#de3697","#f98dae","#f98bae","#f98aad","#f988ad","#f988ad","#f986ac","#f984ab","#f984ab","#f883ab","#d52b93","#d52b93","#d32992","#d22891","#d22891","#d02690","#cf258f","#cf258f","#f877a6","#f877a6","#f875a6","#f873a5","#f873a5","#f871a4","#f770a4","#f76ea3","#c61b8b","#c4198a","#c31889","#c31889","#c21688","#c01588","#c01588","#bf1387","#bd1186","#f564a0","#f462a0","#f361a0","#f35f9f","#f35f9f","#f25d9f","#f15c9f","#f15c9f","#b40881","#b30681","#b30681","#b10580","#b0037f","#b0037f","#ae017e","#ae017e","#ec529d","#eb509c","#ea4f9c","#ea4f9c","#ea4d9c","#e94b9c","#e94b9c","#e84a9b","#e7489b","#a3017d","#a1017c","#a1017c","#a0017c","#9e017c","#9e017c","#9c017c","#9b017b","#e23e99","#e23e99","#e13d99","#e13b98","#e13b98","#e03a98","#df3898","#df3898","#91017a","#91017a","#8f017a","#8f017a","#8e017a","#8c0179","#8c0179","#8b0179","#d82e94","#d62d93","#d52b93","#d52b93","#d32992","#d22891","#d22891","#d02690","#cf258f","#810178","#7f0178","#7d0177","#7d0177","#7c0177","#7a0177","#7a0177","#790177","#c71d8c","#c61b8b","#c4198a","#c4198a","#c31889","#c21688","#c21688","#c01588","#6f0174","#6f0174","#6e0174","#6c0173","#6c0173","#6b0173","#6b0173","#690173","#680172","#b70b83","#b60982","#b40881","#b40881","#b30681","#b30681","#b10580","#b0037f","#600070","#5f0070","#5d006f","#5d006f","#5b006f","#5b006f","#5a006e","#58006e","#a8017d","#a6017d","#a5017d","#a5017d","#a3017d","#a3017d","#a1017c","#a0017c","#a0017c","#4f006c","#4f006c","#4e006b","#4c006b","#4c006b","#4b006a","#49006a","#49006a"],
 };
 
 const availableColorMaps = Object.keys(colorMaps);
@@ -911,18 +978,7 @@ class VertexScalarQuantity {
     guiFields[this.prefix + "#ColorMap"] = "viridis";
     this.applyColorMap(guiFields[this.prefix + "#ColorMap"]);
     guiFolder
-      .add(
-        guiFields,
-        this.prefix + "#ColorMap",
-        availableColorMaps
-        //        [
-        // "viridis",
-        // "coolwarm",
-        // "plasma",
-        // "magma",
-        // "inferno",
-        //        ]
-      )
+      .add(guiFields, this.prefix + "#ColorMap", availableColorMaps)
       .onChange((cm) => {
         this.applyColorMap(cm);
       })
@@ -946,7 +1002,7 @@ class VertexScalarQuantity {
   }
 
   initializeColorMap() {
-    let F = this.parent.faces.size();
+    let F = this.parent.faces.length;
     let colors = new Float32Array(F * 3 * 3);
     this.mesh.geometry.setAttribute("color", new BufferAttribute(colors, 3));
   }
@@ -955,11 +1011,11 @@ class VertexScalarQuantity {
     // update color buffer
     const colors = this.mesh.geometry.attributes.color.array;
 
-    let F = this.parent.faces.size();
+    let F = this.parent.faces.length;
     for (let iF = 0; iF < F; iF++) {
-      let face = this.parent.faces.get(iF);
+      let face = this.parent.faces[iF];
       for (let iV = 0; iV < 3; iV++) {
-        let value = this.values[this.parent.getCorner(face, iV)];
+        let value = this.values[face[iV]];
         let color = applyColorMap(cm, value, this.dataMin, this.dataMax);
 
         colors[3 * 3 * iF + 3 * iV + 0] = color.r;
@@ -1096,6 +1152,153 @@ class PointCloudScalarQuantity {
 
   getVertexValue(iV) {
     return this.values[iV];
+  }
+  getEdgeValue(iE) {
+    return undefined;
+  }
+  getFaceValue(iE) {
+    return undefined;
+  }
+
+  remove() {}
+}
+
+function computeMinMax$1(values) {
+  let min = values[0];
+  let max = values[0];
+  values.forEach((v) => {
+    min = Math.min(min, v);
+    max = Math.max(max, v);
+  });
+  return [min, max];
+}
+
+class VertexDistanceQuantity {
+  constructor(name, values, parentMesh) {
+    this.parent = parentMesh;
+    this.gp = this.parent.gp;
+    this.values = values;
+    this.name = name;
+    this.enabled = false;
+
+    this.isDominantQuantity = true;
+
+    [this.dataMin, this.dataMax] = computeMinMax$1(values);
+
+    // create a new mesh material
+    let functionMaterial = createVertexDistanceFunctionMaterial(
+      this.gp.matcapTextures.r,
+      this.gp.matcapTextures.g,
+      this.gp.matcapTextures.b,
+      this.gp.matcapTextures.k
+    );
+
+    // build a three.js mesh to visualize the function
+    this.mesh = new Mesh(this.parent.mesh.geometry.clone(), functionMaterial);
+    this.mesh.material.uniforms.colormap.value = this.gp.stripeTexture;
+    this.initializeDistances(this.values);
+
+    // Copy some attributes from parent
+    this.mesh.geometry.attributes.position = this.parent.mesh.geometry.attributes.position;
+    this.mesh.geometry.attributes.normal = this.parent.mesh.geometry.attributes.normal;
+    this.mesh.material.uniforms.edgeWidth = this.parent.mesh.material.uniforms.edgeWidth;
+    this.mesh.material.uniforms.edgeColor = this.parent.mesh.material.uniforms.edgeColor;
+  }
+
+  initGui(guiFields, guiFolder) {
+    this.prefix = this.parent.name + "#" + this.name;
+    this.guiFields = guiFields;
+
+    guiFields[this.prefix + "#Enabled"] = false;
+    guiFolder
+      .add(guiFields, this.prefix + "#Enabled")
+      .onChange((e) => {
+        this.setEnabled(e);
+      })
+      .listen()
+      .name("Enabled");
+
+    // guiFields[this.name + "#Scale"] = 1;
+    // this.setScale(guiFields[this.name + "#Scale"]);
+    // guiFolder
+    //   .add(guiFields, this.name + "#Scale")
+    //   .min(0)
+    //   .max(2)
+    //   .step(0.05)
+    //   .onChange((scale) => {
+    //     this.setScale(scale);
+    //   })
+    //   .listen()
+    //   .name("Scale");
+
+    // guiFields[this.prefix + "#ColorMap"] = "viridis";
+    // this.applyColorMap(guiFields[this.prefix + "#ColorMap"]);
+    // guiFolder
+    //   .add(guiFields, this.prefix + "#ColorMap", availableColorMaps)
+    //   .onChange((cm) => {
+    //     this.applyColorMap(cm);
+    //   })
+    //   .listen()
+    //   .name("Color Map");
+  }
+
+  setEnabled(enabled) {
+    this.guiFields[this.prefix + "#Enabled"] = enabled;
+    this.enabled = enabled;
+    if (enabled) {
+      this.parent.enableQuantity(this);
+    } else {
+      this.parent.disableQuantity(this);
+    }
+  }
+
+  setColorMap(cm) {
+    this.guiFields[this.prefix + "#ColorMap"] = cm;
+    this.applyColorMap(cm);
+  }
+
+  // setScale(scale) {
+  //   this.mesh.material.uniforms.scale.value = scale;
+  // }
+
+  initializeDistances(values) {
+    let F = this.parent.faces.length;
+    let distances = new Float32Array(F * 3);
+
+    for (let iF = 0; iF < F; iF++) {
+      let face = this.parent.faces[iF];
+      for (let iV = 0; iV < 3; iV++) {
+        let val = this.values[face[iV]];
+        val = (val - this.dataMin) / (this.dataMax - this.dataMin);
+        distances[3 * iF + iV] = val;
+      }
+    }
+
+    this.mesh.geometry.setAttribute("value", new BufferAttribute(distances, 1));
+  }
+
+  applyColorMap(cm) {
+    // update color buffer
+    const colors = this.mesh.geometry.attributes.color.array;
+
+    let F = this.parent.faces.length;
+    for (let iF = 0; iF < F; iF++) {
+      let face = this.parent.faces[iF];
+      for (let iV = 0; iV < 3; iV++) {
+        let value = this.values[face[iV]];
+        let color = applyColorMap(cm, value, this.dataMin, this.dataMax);
+
+        colors[3 * 3 * iF + 3 * iV + 0] = color.r;
+        colors[3 * 3 * iF + 3 * iV + 1] = color.g;
+        colors[3 * 3 * iF + 3 * iV + 2] = color.b;
+      }
+    }
+
+    this.mesh.geometry.attributes.color.needsUpdate = true;
+  }
+
+  getVertexValue(iV) {
+    return this.gp.prettyScalar(this.values[iV]);
   }
   getEdgeValue(iE) {
     return undefined;
@@ -1491,6 +1694,17 @@ class SurfaceMesh {
   addVertexScalarQuantity(name, values) {
     this.quantities[name] = new VertexScalarQuantity(name, values, this);
 
+    this.guiFolder.removeFolder(name);
+    let quantityGui = this.guiFolder.addFolder(name);
+    this.quantities[name].initGui(this.guiFields, quantityGui);
+
+    return this.quantities[name];
+  }
+
+  addVertexDistanceQuantity(name, values) {
+    this.quantities[name] = new VertexDistanceQuantity(name, values, this);
+
+    this.guiFolder.removeFolder(name);
     let quantityGui = this.guiFolder.addFolder(name);
     this.quantities[name].initGui(this.guiFields, quantityGui);
 
@@ -1500,6 +1714,7 @@ class SurfaceMesh {
   addVertexVectorQuantity(name, values) {
     this.quantities[name] = new VertexVectorQuantity(name, values, this);
 
+    this.guiFolder.removeFolder(name);
     let quantityGui = this.guiFolder.addFolder(name);
     this.quantities[name].initGui(this.guiFields, quantityGui);
 
@@ -1514,6 +1729,7 @@ class SurfaceMesh {
       this
     );
 
+    this.guiFolder.removeFolder(name);
     let quantityGui = this.guiFolder.addFolder(name);
     this.quantities[name].initGui(this.guiFields, quantityGui);
 
@@ -1848,14 +2064,6 @@ class SurfaceMesh {
     if (localInd < this.facePickIndStart) {
       this.gp.setDataHeader(`Surface Mesh ${this.name}`, `Vertex ${localInd}`);
 
-      console.log(
-        "Vertex ",
-        localInd,
-        " position ",
-        this.coords[localInd],
-        this
-      );
-
       this.gp.clearDataFields();
       this.gp.showDataField(
         "position",
@@ -1870,19 +2078,15 @@ class SurfaceMesh {
       }
       this.vertexPickCallback(localInd);
     } else if (localInd < this.edgePickIndStart) {
-      this.gp.setDataHeader(
-        `Surface Mesh ${this.name}`,
-        `Face ${localInd - this.facePickIndStart}`
-      );
+      const iF = localInd - this.facePickIndStart;
+      this.gp.setDataHeader(`Surface Mesh ${this.name}`, `Face ${iF}`);
       this.gp.clearDataFields();
-      this.facePickCallback(localInd - this.facePickIndStart);
+      this.facePickCallback(iF);
     } else {
-      this.gp.setDataHeader(
-        `Surface Mesh ${this.name}`,
-        `Edge ${localInd - this.edgePickIndStart}`
-      );
+      const iE = localInd - this.edgePickIndStart;
+      this.gp.setDataHeader(`Surface Mesh ${this.name}`, `Edge ${iE}`);
       this.gp.clearDataFields();
-      this.edgePickCallback(localInd - this.edgePickIndStart);
+      this.edgePickCallback(iE);
     }
   }
 
@@ -2172,7 +2376,7 @@ class PointCloud {
     this.gp.clearDataFields();
     this.gp.showDataField(
       "position",
-      this.gp.prettyVector(this.coords.get(localInd))
+      this.gp.prettyVector(this.coords[localInd])
     );
 
     for (let qName in this.quantities) {
@@ -2650,6 +2854,10 @@ class Geoptic {
     );
     this.matcapTextures.k = new TextureLoader().load(
       this.geopticPath + "/img/clay_k.png"
+    );
+
+    this.stripeTexture = new TextureLoader().load(
+      this.geopticPath + "/img/stripes.png"
     );
   }
 

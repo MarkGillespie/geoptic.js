@@ -15,6 +15,7 @@ import {
 } from "./shaders.js";
 import { getNextUniqueColor } from "./color_utils.js";
 import { VertexScalarQuantity } from "./scalar_quantity.js";
+import { VertexDistanceQuantity } from "./distance_quantity.js";
 import { VertexVectorQuantity } from "./vector_quantity.js";
 import { VertexParameterizationQuantity } from "./parameterization_quantity.js";
 
@@ -54,6 +55,17 @@ class SurfaceMesh {
   addVertexScalarQuantity(name, values) {
     this.quantities[name] = new VertexScalarQuantity(name, values, this);
 
+    this.guiFolder.removeFolder(name);
+    let quantityGui = this.guiFolder.addFolder(name);
+    this.quantities[name].initGui(this.guiFields, quantityGui);
+
+    return this.quantities[name];
+  }
+
+  addVertexDistanceQuantity(name, values) {
+    this.quantities[name] = new VertexDistanceQuantity(name, values, this);
+
+    this.guiFolder.removeFolder(name);
     let quantityGui = this.guiFolder.addFolder(name);
     this.quantities[name].initGui(this.guiFields, quantityGui);
 
@@ -63,6 +75,7 @@ class SurfaceMesh {
   addVertexVectorQuantity(name, values) {
     this.quantities[name] = new VertexVectorQuantity(name, values, this);
 
+    this.guiFolder.removeFolder(name);
     let quantityGui = this.guiFolder.addFolder(name);
     this.quantities[name].initGui(this.guiFields, quantityGui);
 
@@ -77,6 +90,7 @@ class SurfaceMesh {
       this
     );
 
+    this.guiFolder.removeFolder(name);
     let quantityGui = this.guiFolder.addFolder(name);
     this.quantities[name].initGui(this.guiFields, quantityGui);
 
@@ -426,19 +440,15 @@ class SurfaceMesh {
       }
       this.vertexPickCallback(localInd);
     } else if (localInd < this.edgePickIndStart) {
-      this.gp.setDataHeader(
-        `Surface Mesh ${this.name}`,
-        `Face ${localInd - this.facePickIndStart}`
-      );
+      const iF = localInd - this.facePickIndStart;
+      this.gp.setDataHeader(`Surface Mesh ${this.name}`, `Face ${iF}`);
       this.gp.clearDataFields();
-      this.facePickCallback(localInd - this.facePickIndStart);
+      this.facePickCallback(iF);
     } else {
-      this.gp.setDataHeader(
-        `Surface Mesh ${this.name}`,
-        `Edge ${localInd - this.edgePickIndStart}`
-      );
+      const iE = localInd - this.edgePickIndStart;
+      this.gp.setDataHeader(`Surface Mesh ${this.name}`, `Edge ${iE}`);
       this.gp.clearDataFields();
-      this.edgePickCallback(localInd - this.edgePickIndStart);
+      this.edgePickCallback(iE);
     }
   }
 

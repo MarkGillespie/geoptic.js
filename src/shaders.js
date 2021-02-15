@@ -159,6 +159,72 @@ function createVertexScalarFunctionMaterial(tex_r, tex_g, tex_b, tex_k) {
   return Material;
 }
 
+function createVertexDistanceFunctionMaterial(tex_r, tex_g, tex_b, tex_k) {
+  let vertexShader = `
+        attribute vec3 barycoord;
+        attribute float value;
+
+        varying vec2 Point;
+        varying vec3 Barycoord;
+        varying float Value;
+
+        void main()
+        {
+            vec3 vNormal = ( mat3( modelViewMatrix ) * normal );
+            vNormal = normalize(vNormal);
+
+            // pull slightly inward, to reduce sampling artifacts near edges
+            Point.x = 0.93 * vNormal.x * 0.5 + 0.5;
+            Point.y = 0.93 * vNormal.y * 0.5 + 0.5;
+
+            Barycoord = barycoord;
+            Value = value;
+
+            gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+
+        }
+    `;
+
+  let fragmentShader = `
+        ${matcapIncludes}
+        uniform sampler2D colormap; // Matcap texture
+        uniform vec3 edgeColor;
+        uniform float edgeWidth;
+        uniform float scale;
+
+        varying vec2 Point;
+        varying vec3 Barycoord;
+        varying float Value;
+
+        ${common}
+
+        void main(void){
+
+            vec3 Color = sRGBToLinear(texture2D(colormap, vec2(mod(Value*scale,1.), 0.5))).rgb;
+
+            float alpha = getEdgeFactor(Barycoord, vec3(1.,1.,1.), edgeWidth);
+            gl_FragColor = lightSurfaceMat((1.-alpha) * Color + alpha * edgeColor, Point);
+        }
+    `;
+  let Material = new ShaderMaterial({
+    uniforms: {
+      Matcap_r: { value: tex_r },
+      Matcap_g: { value: tex_g },
+      Matcap_b: { value: tex_b },
+      Matcap_k: { value: tex_k },
+      colormap: { value: undefined },
+      edgeColor: { value: new Vector3(0, 0, 0) },
+      edgeWidth: { value: 0 },
+      scale: { value: 1 },
+    },
+    vertexShader,
+    fragmentShader,
+  });
+  Material.side = DoubleSide;
+
+  return Material;
+}
+
 function VertexParamCheckerboard(tex_r, tex_g, tex_b, tex_k) {
   let vertexShader = `
         attribute vec3 barycoord;
@@ -659,6 +725,7 @@ export {
   createMatCapMaterial,
   createInstancedMatCapMaterial,
   createVertexScalarFunctionMaterial,
+  createVertexDistanceFunctionMaterial,
   VertexParamCheckerboard,
   VertexParamGrid,
   createInstancedScalarFunctionMaterial,

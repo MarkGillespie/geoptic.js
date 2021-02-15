@@ -232,6 +232,10 @@ class Geoptic {
     this.matcapTextures.k = new THREE.TextureLoader().load(
       this.geopticPath + "/img/clay_k.png"
     );
+
+    this.stripeTexture = new THREE.TextureLoader().load(
+      this.geopticPath + "/img/stripes.png"
+    );
   }
 
   initRenderer(container) {
