@@ -19,6 +19,12 @@ import { VertexDistanceQuantity } from "./distance_quantity.js";
 import { VertexVectorQuantity } from "./vector_quantity.js";
 import { VertexParameterizationQuantity } from "./parameterization_quantity.js";
 
+import {
+  standardizeVector2Array,
+  standardizeVector3Array,
+  standardizeFaceArray,
+} from "./standardize_data_array.js";
+
 class SurfaceMesh {
   constructor(coords, faces, name, geopticEnvironment, options = {}) {
     this.gp = geopticEnvironment;
@@ -73,6 +79,7 @@ class SurfaceMesh {
   }
 
   addVertexVectorQuantity(name, values) {
+    values = standardizeVector3Array(values);
     this.quantities[name] = new VertexVectorQuantity(name, values, this);
 
     this.guiFolder.removeFolder(name);
@@ -83,7 +90,7 @@ class SurfaceMesh {
   }
 
   addVertexParameterizationQuantity(name, values) {
-    values = this.gp.standardizeVector2Array(values);
+    values = standardizeVector2Array(values);
     this.quantities[name] = new VertexParameterizationQuantity(
       name,
       values,
