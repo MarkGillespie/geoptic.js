@@ -2,3 +2,7 @@ node_modules
 .DS_Store
 .polyscope.ini
 imgui.ini
+
+# ignore images generated in misc folder
+misc/*.ppm
+misc/*.png
