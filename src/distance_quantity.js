@@ -7,6 +7,7 @@ import {
   InstancedMesh,
   Color,
   Matrix4,
+  TextureLoader,
 } from "https://unpkg.com/three@0.125.1/build/three.module.js";
 
 import { createVertexDistanceFunctionMaterial } from "./shaders.js";
@@ -45,7 +46,9 @@ class VertexDistanceQuantity {
 
     // build a three.js mesh to visualize the function
     this.mesh = new Mesh(this.parent.mesh.geometry.clone(), functionMaterial);
-    this.mesh.material.uniforms.colormap.value = this.gp.stripeTexture;
+    this.mesh.material.uniforms.colormap.value = new TextureLoader().load(
+      this.gp.geopticPath + "/img/colormaps/RdPu.png"
+    );
     this.initializeDistances(this.values);
 
     // Copy some attributes from parent
@@ -68,28 +71,41 @@ class VertexDistanceQuantity {
       .listen()
       .name("Enabled");
 
-    // guiFields[this.name + "#Scale"] = 1;
-    // this.setScale(guiFields[this.name + "#Scale"]);
-    // guiFolder
-    //   .add(guiFields, this.name + "#Scale")
-    //   .min(0)
-    //   .max(2)
-    //   .step(0.05)
-    //   .onChange((scale) => {
-    //     this.setScale(scale);
-    //   })
-    //   .listen()
-    //   .name("Scale");
+    guiFields[this.name + "#Stripes"] = 20;
+    this.setStripes(guiFields[this.name + "#Stripes"]);
+    guiFolder
+      .add(guiFields, this.name + "#Stripes")
+      .min(0)
+      .max(50)
+      .step(0.5)
+      .onChange((stripes) => {
+        this.setStripes(stripes);
+      })
+      .listen()
+      .name("Stripes");
 
-    // guiFields[this.prefix + "#ColorMap"] = "viridis";
-    // this.applyColorMap(guiFields[this.prefix + "#ColorMap"]);
-    // guiFolder
-    //   .add(guiFields, this.prefix + "#ColorMap", availableColorMaps)
-    //   .onChange((cm) => {
-    //     this.applyColorMap(cm);
-    //   })
-    //   .listen()
-    //   .name("Color Map");
+    guiFields[this.name + "#Offset"] = 0.2;
+    this.setOffset(guiFields[this.name + "#Offset"]);
+    guiFolder
+      .add(guiFields, this.name + "#Offset")
+      .min(0)
+      .max(0.5)
+      .step(0.05)
+      .onChange((offset) => {
+        this.setOffset(offset);
+      })
+      .listen()
+      .name("Offset");
+
+    guiFields[this.prefix + "#ColorMap"] = "rdpu";
+    this.applyColorMap(guiFields[this.prefix + "#ColorMap"]);
+    guiFolder
+      .add(guiFields, this.prefix + "#ColorMap", availableColorMaps)
+      .onChange((cm) => {
+        this.applyColorMap(cm);
+      })
+      .listen()
+      .name("Color Map");
   }
 
   setEnabled(enabled) {
@@ -107,9 +123,13 @@ class VertexDistanceQuantity {
     this.applyColorMap(cm);
   }
 
-  // setScale(scale) {
-  //   this.mesh.material.uniforms.scale.value = scale;
-  // }
+  setStripes(stripes) {
+    this.mesh.material.uniforms.scale.value = stripes;
+  }
+
+  setOffset(offset) {
+    this.mesh.material.uniforms.offset.value = offset;
+  }
 
   initializeDistances(values) {
     let F = this.parent.faces.length;
@@ -128,23 +148,9 @@ class VertexDistanceQuantity {
   }
 
   applyColorMap(cm) {
-    // update color buffer
-    const colors = this.mesh.geometry.attributes.color.array;
-
-    let F = this.parent.faces.length;
-    for (let iF = 0; iF < F; iF++) {
-      let face = this.parent.faces[iF];
-      for (let iV = 0; iV < 3; iV++) {
-        let value = this.values[face[iV]];
-        let color = applyColorMap(cm, value, this.dataMin, this.dataMax);
-
-        colors[3 * 3 * iF + 3 * iV + 0] = color.r;
-        colors[3 * 3 * iF + 3 * iV + 1] = color.g;
-        colors[3 * 3 * iF + 3 * iV + 2] = color.b;
-      }
-    }
-
-    this.mesh.geometry.attributes.color.needsUpdate = true;
+    this.mesh.material.uniforms.colormap.value = new TextureLoader().load(
+      this.gp.geopticPath + "/img/colormaps/" + cm + ".png"
+    );
   }
 
   getVertexValue(iV) {

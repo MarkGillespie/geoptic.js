@@ -5,6 +5,7 @@ import {
   Vector3,
   Mesh,
   InstancedMesh,
+  TextureLoader,
   Color,
   Matrix4,
 } from "https://unpkg.com/three@0.125.1/build/three.module.js";
@@ -48,7 +49,7 @@ class VertexScalarQuantity {
 
     // build a three.js mesh to visualize the function
     this.mesh = new Mesh(this.parent.mesh.geometry.clone(), functionMaterial);
-    this.initializeColorMap();
+    this.initializeFunctionValues();
 
     // Copy some attributes from parent
     this.mesh.geometry.attributes.position = this.parent.mesh.geometry.attributes.position;
@@ -96,30 +97,26 @@ class VertexScalarQuantity {
     this.applyColorMap(cm);
   }
 
-  initializeColorMap() {
+  initializeFunctionValues() {
     let F = this.parent.faces.length;
-    let colors = new Float32Array(F * 3 * 3);
-    this.mesh.geometry.setAttribute("color", new BufferAttribute(colors, 3));
-  }
+    let vals = new Float32Array(F * 3);
 
-  applyColorMap(cm) {
-    // update color buffer
-    const colors = this.mesh.geometry.attributes.color.array;
-
-    let F = this.parent.faces.length;
     for (let iF = 0; iF < F; iF++) {
       let face = this.parent.faces[iF];
       for (let iV = 0; iV < 3; iV++) {
-        let value = this.values[face[iV]];
-        let color = applyColorMap(cm, value, this.dataMin, this.dataMax);
-
-        colors[3 * 3 * iF + 3 * iV + 0] = color.r;
-        colors[3 * 3 * iF + 3 * iV + 1] = color.g;
-        colors[3 * 3 * iF + 3 * iV + 2] = color.b;
+        let val = this.values[face[iV]];
+        val = (val - this.dataMin) / (this.dataMax - this.dataMin);
+        vals[3 * iF + iV] = val;
       }
     }
 
-    this.mesh.geometry.attributes.color.needsUpdate = true;
+    this.mesh.geometry.setAttribute("value", new BufferAttribute(vals, 1));
+  }
+
+  applyColorMap(cm) {
+    this.mesh.material.uniforms.colormap.value = new TextureLoader().load(
+      this.gp.geopticPath + "/img/colormaps/" + cm + ".png"
+    );
   }
 
   getVertexValue(iV) {
@@ -138,7 +135,7 @@ class VertexScalarQuantity {
 class PointCloudScalarQuantity {
   constructor(name, values, parentCloud) {
     this.parent = parentCloud;
-    this.gp = this.parent.ps;
+    this.gp = this.parent.gp;
     this.values = values;
     this.name = name;
     this.enabled = false;
@@ -155,18 +152,10 @@ class PointCloudScalarQuantity {
       this.gp.matcapTextures.k
     );
 
-    // create matcap material
-    let matcapMaterial = createInstancedScalarFunctionMaterial(
-      this.gp.matcapTextures.r,
-      this.gp.matcapTextures.g,
-      this.gp.matcapTextures.b,
-      this.gp.matcapTextures.k
-    );
-
     // create mesh
     this.mesh = new InstancedMesh(
       this.parent.mesh.geometry.clone(),
-      matcapMaterial,
+      functionMaterial,
       this.parent.nV
     );
 
@@ -176,7 +165,7 @@ class PointCloudScalarQuantity {
     this.mesh.material.uniforms.scale = this.parent.mesh.material.uniforms.scale;
     this.mesh.instanceMatrix = this.parent.mesh.instanceMatrix;
 
-    this.initializeColorMap();
+    this.initializeFunctionValues();
   }
 
   initGui(guiFields, guiFolder) {
@@ -195,13 +184,7 @@ class PointCloudScalarQuantity {
     guiFields[this.prefix + "#ColorMap"] = "viridis";
     this.applyColorMap(guiFields[this.prefix + "#ColorMap"]);
     guiFolder
-      .add(guiFields, this.prefix + "#ColorMap", [
-        "viridis",
-        "coolwarm",
-        "plasma",
-        "magma",
-        "inferno",
-      ])
+      .add(guiFields, this.prefix + "#ColorMap", availableColorMaps)
       .onChange((cm) => {
         this.applyColorMap(cm);
       })
@@ -219,30 +202,25 @@ class PointCloudScalarQuantity {
     }
   }
 
-  initializeColorMap() {
-    let V = this.parent.nV;
-    let colors = new Float32Array(V * 3);
+  initializeFunctionValues() {
+    let vals = new Float32Array(this.parent.nV * 3);
+
+    for (let iV = 0; iV < this.parent.nV; iV++) {
+      let val = this.values[iV];
+      val = (val - this.dataMin) / (this.dataMax - this.dataMin);
+      vals[iV] = val;
+    }
+
     this.mesh.geometry.setAttribute(
-      "color",
-      new InstancedBufferAttribute(colors, 3)
+      "value",
+      new InstancedBufferAttribute(vals, 1)
     );
   }
 
   applyColorMap(cm) {
-    // update color buffer
-    const colors = this.mesh.geometry.attributes.color.array;
-
-    let V = this.parent.nV;
-    for (let iV = 0; iV < V; iV++) {
-      let value = this.values[iV];
-      let color = applyColorMap(cm, value, this.dataMin, this.dataMax);
-
-      colors[3 * iV + 0] = color.r;
-      colors[3 * iV + 1] = color.g;
-      colors[3 * iV + 2] = color.b;
-    }
-
-    this.mesh.geometry.attributes.color.needsUpdate = true;
+    this.mesh.material.uniforms.colormap.value = new TextureLoader().load(
+      this.gp.geopticPath + "/img/colormaps/" + cm + ".png"
+    );
   }
 
   getVertexValue(iV) {

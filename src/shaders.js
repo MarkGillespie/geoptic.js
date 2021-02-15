@@ -102,11 +102,11 @@ function createMatCapMaterial(tex_r, tex_g, tex_b, tex_k) {
 function createVertexScalarFunctionMaterial(tex_r, tex_g, tex_b, tex_k) {
   let vertexShader = `
         attribute vec3 barycoord;
-        attribute vec3 color;
+        attribute float value;
 
         varying vec2 Point;
         varying vec3 Barycoord;
-        varying vec3 Color;
+        varying float Value;
 
         void main()
         {
@@ -118,7 +118,7 @@ function createVertexScalarFunctionMaterial(tex_r, tex_g, tex_b, tex_k) {
             Point.y = 0.93 * vNormal.y * 0.5 + 0.5;
 
             Barycoord = barycoord;
-            Color = color;
+            Value = value;
 
             gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
 
@@ -127,18 +127,19 @@ function createVertexScalarFunctionMaterial(tex_r, tex_g, tex_b, tex_k) {
 
   let fragmentShader = `
         ${matcapIncludes}
+        uniform sampler2D colormap; // colormap
         uniform vec3 edgeColor;
         uniform float edgeWidth;
 
         varying vec2 Point;
         varying vec3 Barycoord;
-        varying vec3 Color;
+        varying float Value;
 
         ${common}
 
         void main(void){
-
             float alpha = getEdgeFactor(Barycoord, vec3(1.,1.,1.), edgeWidth);
+            vec3 Color = sRGBToLinear(texture2D(colormap, vec2(Value, 0.5))).rgb;
             gl_FragColor = lightSurfaceMat((1.-alpha) * Color + alpha * edgeColor, Point);
         }
     `;
@@ -148,6 +149,7 @@ function createVertexScalarFunctionMaterial(tex_r, tex_g, tex_b, tex_k) {
       Matcap_g: { value: tex_g },
       Matcap_b: { value: tex_b },
       Matcap_k: { value: tex_k },
+      colormap: { value: undefined },
       edgeColor: { value: new Vector3(0, 0, 0) },
       edgeWidth: { value: 0 },
     },
@@ -187,10 +189,11 @@ function createVertexDistanceFunctionMaterial(tex_r, tex_g, tex_b, tex_k) {
 
   let fragmentShader = `
         ${matcapIncludes}
-        uniform sampler2D colormap; // Matcap texture
+        uniform sampler2D colormap; // colormap
         uniform vec3 edgeColor;
         uniform float edgeWidth;
         uniform float scale;
+        uniform float offset;
 
         varying vec2 Point;
         varying vec3 Barycoord;
@@ -199,11 +202,27 @@ function createVertexDistanceFunctionMaterial(tex_r, tex_g, tex_b, tex_k) {
         ${common}
 
         void main(void){
+            float v1 = Value * (1.-offset);
+            float v2 = Value * (1.-offset) + offset;
 
-            vec3 Color = sRGBToLinear(texture2D(colormap, vec2(mod(Value*scale,1.), 0.5))).rgb;
+            vec3 color1 = sRGBToLinear(texture2D(colormap, vec2(v1, 0.5))).rgb;
+            vec3 color2 = sRGBToLinear(texture2D(colormap, vec2(v2, 0.5))).rgb;
+
+            // Apply the stripe effect
+            float mX = mod(Value * 2.*scale, 2.)  - 1.f; // in [-1, 1]
+
+            float p = 6.;
+            float minDSmooth = pow(mX, 1. / p);
+            // TODO do some clever screen space derivative thing to prevent aliasing
+
+            float adjV = sign(mX) * minDSmooth;
+
+            float s = smoothstep(-1.f, 1.f, adjV);
+
+            vec3 outColor = (1.-s)*color1 + s* color2;
 
             float alpha = getEdgeFactor(Barycoord, vec3(1.,1.,1.), edgeWidth);
-            gl_FragColor = lightSurfaceMat((1.-alpha) * Color + alpha * edgeColor, Point);
+            gl_FragColor = lightSurfaceMat((1.-alpha) * outColor + alpha * edgeColor, Point);
         }
     `;
   let Material = new ShaderMaterial({
@@ -216,6 +235,7 @@ function createVertexDistanceFunctionMaterial(tex_r, tex_g, tex_b, tex_k) {
       edgeColor: { value: new Vector3(0, 0, 0) },
       edgeWidth: { value: 0 },
       scale: { value: 1 },
+      offset: { value: 0.2 },
     },
     vertexShader,
     fragmentShader,
@@ -585,9 +605,9 @@ function createInstancedMatCapMaterial(tex_r, tex_g, tex_b, tex_k) {
 function createInstancedScalarFunctionMaterial(tex_r, tex_g, tex_b, tex_k) {
   let vertexShader = `
         uniform float scale;
-        attribute vec3 color;
+        attribute float value;
 
-        varying vec3 Color;
+        varying float Value;
         varying vec2 Point;
 
         void main()
@@ -599,7 +619,7 @@ function createInstancedScalarFunctionMaterial(tex_r, tex_g, tex_b, tex_k) {
             Point.x = 0.93 * vNormal.x * 0.5 + 0.5;
             Point.y = 0.93 * vNormal.y * 0.5 + 0.5;
 
-            Color = color;
+            Value = value;
 
             gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4( scale * position, 1.0 );
 
@@ -608,13 +628,15 @@ function createInstancedScalarFunctionMaterial(tex_r, tex_g, tex_b, tex_k) {
 
   let fragmentShader = `
         ${matcapIncludes}
+        uniform sampler2D colormap; // colormap
 
-        varying vec3 Color;
+        varying float Value;
         varying vec2 Point;
 
         ${common}
 
         void main(void){
+            vec3 Color = sRGBToLinear(texture2D(colormap, vec2(Value, 0.5))).rgb;
             gl_FragColor = lightSurfaceMat(Color, Point);
         }
     `;
@@ -625,6 +647,7 @@ function createInstancedScalarFunctionMaterial(tex_r, tex_g, tex_b, tex_k) {
       Matcap_g: { value: tex_g },
       Matcap_b: { value: tex_b },
       Matcap_k: { value: tex_k },
+      colormap: { value: undefined },
       scale: { value: 1 },
     },
     vertexShader,

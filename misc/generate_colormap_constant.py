@@ -13,6 +13,11 @@ def write_map(name):
     cmapName = name
     cmap = matplotlib.cm.get_cmap(cmapName)
 
+    # rename bwr to "coolwarm" for compatibility with polyscope
+    if (name == "bwr") :
+        name = "coolwarm"
+    name = name.lower() # name files in lower case
+
     # get a cmocean colormap
     # import cmocean
     # cmapName = 'phase'
