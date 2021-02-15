@@ -17,7 +17,6 @@ class VertexParameterizationQuantity {
     this.gp = this.parent.gp;
     this.coords = coords;
     this.name = name;
-    this.enabled = false;
 
     this.isDominantQuantity = true;
 

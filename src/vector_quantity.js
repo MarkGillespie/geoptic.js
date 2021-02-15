@@ -25,7 +25,6 @@ class VertexVectorQuantity {
     this.gp = this.parent.gp;
     this.values = values;
     this.name = name;
-    this.enabled = false;
     this.res = 4;
     this.rad = 0.5;
     this.len = 3;

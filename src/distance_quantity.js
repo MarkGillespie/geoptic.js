@@ -30,7 +30,6 @@ class VertexDistanceQuantity {
     this.gp = this.parent.gp;
     this.values = values;
     this.name = name;
-    this.enabled = false;
 
     this.isDominantQuantity = true;
 

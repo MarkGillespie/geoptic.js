@@ -1194,7 +1194,6 @@
       this.gp = this.parent.gp;
       this.values = values;
       this.name = name;
-      this.enabled = false;
 
       this.isDominantQuantity = true;
 
@@ -1357,7 +1356,6 @@
       this.gp = this.parent.gp;
       this.values = values;
       this.name = name;
-      this.enabled = false;
       this.res = 4;
       this.rad = 0.5;
       this.len = 3;
@@ -1537,7 +1535,6 @@
       this.gp = this.parent.gp;
       this.coords = coords;
       this.name = name;
-      this.enabled = false;
 
       this.isDominantQuantity = true;
 
@@ -1871,7 +1868,6 @@
       this.coords = coords;
       this.faces = faces;
       this.name = name;
-      this.enabled = true;
 
       // build three.js mesh
       [this.mesh, this.geo] = this.constructThreeMesh(coords, faces);
@@ -2120,7 +2116,7 @@
       if (enabled) {
         let enabledQuantity = false;
         for (let q in this.quantities) {
-          if (this.quantities[q].enabled) {
+          if (this.quantities[q].options.enabled) {
             this.gp.scene.add(this.quantities[q].mesh);
             enabledQuantity = true;
           }
@@ -2168,14 +2164,13 @@
         for (let pName in this.quantities) {
           let p = this.quantities[pName];
           if (p.isDominantQuantity && pName != q.name) {
-            this.options.enabled = false;
             p.options.enabled = false;
             this.gp.scene.remove(p.mesh);
           }
         }
       }
 
-      if (this.enabled) {
+      if (this.options.enabled) {
         if (q.isDominantQuantity) {
           this.gp.scene.remove(this.mesh);
         }
@@ -2184,7 +2179,7 @@
     }
 
     disableQuantity(q) {
-      if (this.enabled) {
+      if (this.options.enabled) {
         this.gp.scene.remove(q.mesh);
         this.gp.scene.add(this.mesh);
       }
@@ -2474,7 +2469,6 @@
       this.nV = coords.length;
       this.coords = coords;
       this.name = name;
-      this.enabled = true;
 
       // build three.js mesh
       this.mesh = this.constructThreeMesh(coords);
@@ -2570,11 +2564,10 @@
 
     setEnabled(enabled) {
       this.options.enabled = enabled;
-      this.enabled = enabled;
       if (enabled) {
         let enabledQuantity = false;
         for (let q in this.quantities) {
-          if (this.quantities[q].enabled) {
+          if (this.quantities[q].options.enabled) {
             this.gp.scene.add(this.quantities[q].mesh);
             enabledQuantity = true;
           }
@@ -2597,14 +2590,13 @@
         for (let pName in this.quantities) {
           let p = this.quantities[pName];
           if (p.isDominantQuantity && pName != q.name) {
-            this.options.enabled = false;
             p.options.enabled = false;
             this.gp.scene.remove(p.mesh);
           }
         }
       }
 
-      if (this.enabled) {
+      if (this.options.enabled) {
         if (q.isDominantQuantity) {
           this.gp.scene.remove(this.mesh);
         }
@@ -2613,7 +2605,7 @@
     }
 
     disableQuantity(q) {
-      if (this.enabled) {
+      if (this.options.enabled) {
         this.gp.scene.remove(q.mesh);
         this.gp.scene.add(this.mesh);
       }
