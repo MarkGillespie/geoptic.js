@@ -44,7 +44,8 @@ class SurfaceMesh {
       this.smoothCornerNormals,
     ] = this.computeSmoothNormals();
 
-    this.pickMesh = this.constructThreePickMesh(coords, faces);
+    if (this.gp.doPicks)
+      this.pickMesh = this.constructThreePickMesh(coords, faces);
 
     this.quantities = {};
 
@@ -256,13 +257,13 @@ class SurfaceMesh {
       if (!enabledQuantity) {
         this.gp.scene.add(this.mesh);
       }
-      this.gp.pickScene.add(this.pickMesh);
+      if (this.gp.doPicks) this.gp.pickScene.add(this.pickMesh);
     } else {
       for (let q in this.quantities) {
         this.gp.scene.remove(this.quantities[q].mesh);
       }
       this.gp.scene.remove(this.mesh);
-      this.gp.pickScene.remove(this.pickMesh);
+      if (this.gp.doPicks) this.gp.pickScene.remove(this.pickMesh);
     }
   }
 
@@ -355,16 +356,19 @@ class SurfaceMesh {
       this.mesh.rotation.z
     );
     this.mesh.setRotationFromAxisAngle(new Vector3(1, 0, 0), 0);
-    this.pickMesh.setRotationFromAxisAngle(new Vector3(1, 0, 0), 0);
+    if (this.gp.doPicks)
+      this.pickMesh.setRotationFromAxisAngle(new Vector3(1, 0, 0), 0);
     let oldPos = this.mesh.position;
     this.mesh.translateX(pos.x - oldPos.x, 1);
     this.mesh.translateY(pos.y - oldPos.y, 1);
     this.mesh.translateZ(pos.z - oldPos.z, 1);
 
-    oldPos = this.pickMesh.position;
-    this.pickMesh.translateX(pos.x - oldPos.x, 1);
-    this.pickMesh.translateY(pos.y - oldPos.y, 1);
-    this.pickMesh.translateZ(pos.z - oldPos.z, 1);
+    if (this.gp.doPicks) {
+      oldPos = this.pickMesh.position;
+      this.pickMesh.translateX(pos.x - oldPos.x, 1);
+      this.pickMesh.translateY(pos.y - oldPos.y, 1);
+      this.pickMesh.translateZ(pos.z - oldPos.z, 1);
+    }
 
     // After translating, we re-apply the old rotation
     this.mesh.setRotationFromEuler(oldRot);
@@ -374,8 +378,11 @@ class SurfaceMesh {
   setOrientationFromMatrix(mat) {
     this.mesh.setRotationFromAxisAngle(new Vector3(1, 0, 0), 0);
     this.mesh.setRotationFromMatrix(mat);
-    this.pickMesh.setRotationFromAxisAngle(new Vector3(1, 0, 0), 0);
-    this.pickMesh.setRotationFromMatrix(mat);
+
+    if (this.gp.doPicks) {
+      this.pickMesh.setRotationFromAxisAngle(new Vector3(1, 0, 0), 0);
+      this.pickMesh.setRotationFromMatrix(mat);
+    }
   }
 
   setOrientationFromFrame(T, N, B) {

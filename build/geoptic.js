@@ -1799,7 +1799,8 @@
         this.smoothCornerNormals,
       ] = this.computeSmoothNormals();
 
-      this.pickMesh = this.constructThreePickMesh(coords, faces);
+      if (this.gp.doPicks)
+        this.pickMesh = this.constructThreePickMesh(coords, faces);
 
       this.quantities = {};
 
@@ -2011,13 +2012,13 @@
         if (!enabledQuantity) {
           this.gp.scene.add(this.mesh);
         }
-        this.gp.pickScene.add(this.pickMesh);
+        if (this.gp.doPicks) this.gp.pickScene.add(this.pickMesh);
       } else {
         for (let q in this.quantities) {
           this.gp.scene.remove(this.quantities[q].mesh);
         }
         this.gp.scene.remove(this.mesh);
-        this.gp.pickScene.remove(this.pickMesh);
+        if (this.gp.doPicks) this.gp.pickScene.remove(this.pickMesh);
       }
     }
 
@@ -2110,16 +2111,19 @@
         this.mesh.rotation.z
       );
       this.mesh.setRotationFromAxisAngle(new THREE.Vector3(1, 0, 0), 0);
-      this.pickMesh.setRotationFromAxisAngle(new THREE.Vector3(1, 0, 0), 0);
+      if (this.gp.doPicks)
+        this.pickMesh.setRotationFromAxisAngle(new THREE.Vector3(1, 0, 0), 0);
       let oldPos = this.mesh.position;
       this.mesh.translateX(pos.x - oldPos.x, 1);
       this.mesh.translateY(pos.y - oldPos.y, 1);
       this.mesh.translateZ(pos.z - oldPos.z, 1);
 
-      oldPos = this.pickMesh.position;
-      this.pickMesh.translateX(pos.x - oldPos.x, 1);
-      this.pickMesh.translateY(pos.y - oldPos.y, 1);
-      this.pickMesh.translateZ(pos.z - oldPos.z, 1);
+      if (this.gp.doPicks) {
+        oldPos = this.pickMesh.position;
+        this.pickMesh.translateX(pos.x - oldPos.x, 1);
+        this.pickMesh.translateY(pos.y - oldPos.y, 1);
+        this.pickMesh.translateZ(pos.z - oldPos.z, 1);
+      }
 
       // After translating, we re-apply the old rotation
       this.mesh.setRotationFromEuler(oldRot);
@@ -2129,8 +2133,11 @@
     setOrientationFromMatrix(mat) {
       this.mesh.setRotationFromAxisAngle(new THREE.Vector3(1, 0, 0), 0);
       this.mesh.setRotationFromMatrix(mat);
-      this.pickMesh.setRotationFromAxisAngle(new THREE.Vector3(1, 0, 0), 0);
-      this.pickMesh.setRotationFromMatrix(mat);
+
+      if (this.gp.doPicks) {
+        this.pickMesh.setRotationFromAxisAngle(new THREE.Vector3(1, 0, 0), 0);
+        this.pickMesh.setRotationFromMatrix(mat);
+      }
     }
 
     setOrientationFromFrame(T, N, B) {
@@ -2332,7 +2339,7 @@
       // build three.js mesh
       this.mesh = this.constructThreeMesh(coords);
 
-      this.pickMesh = this.constructThreePickMesh(coords);
+      if (this.gp.doPicks) this.pickMesh = this.constructThreePickMesh(coords);
 
       this.quantities = {};
 
@@ -2405,7 +2412,8 @@
 
     setRadius(rad) {
       this.mesh.material.uniforms.scale.value = rad;
-      this.pickMesh.material.uniforms.scale.value = rad;
+
+      if (this.gp.doPicks) this.pickMesh.material.uniforms.scale.value = rad;
     }
 
     setEnabled(enabled) {
@@ -2422,13 +2430,13 @@
         if (!enabledQuantity) {
           this.gp.scene.add(this.mesh);
         }
-        this.gp.pickScene.add(this.pickMesh);
+        if (this.gp.doPicks) this.gp.pickScene.add(this.pickMesh);
       } else {
         for (let q in this.quantities) {
           this.gp.scene.remove(this.quantities[q].mesh);
         }
         this.gp.scene.remove(this.mesh);
-        this.gp.pickScene.remove(this.pickMesh);
+        if (this.gp.doPicks) this.gp.pickScene.remove(this.pickMesh);
       }
     }
 
@@ -2781,6 +2789,7 @@
       if (!WebGL_js.WEBGL.isWebGLAvailable()) alert(WebGL_js.WEBGL.getWebGLErrorMessage());
 
       this.geopticPath = options.path || "js/geoptic.js";
+
       this.parent = options.parent || document.body;
 
       this.input = undefined;
@@ -2822,6 +2831,13 @@
 
       this.sceneMin = new THREE.Vector3(0, 0, 0);
       this.sceneMax = new THREE.Vector3(0, 0, 0);
+
+      // If options.picks is set, do whatever that says. Otherwise, enable picks
+      this.doPicks =
+        (options.hasOwnProperty("picks") && options.picks) ||
+        !options.hasOwnProperty("picks");
+
+      this.init();
     }
 
     // must be called after onload
@@ -2893,38 +2909,40 @@
       this.container.style.position = "relative";
       this.parent.appendChild(this.container);
 
-      // <div id="selection-info">
-      //     <div id="info-head">
-      //         <div id="info-head-structure"></div>
-      //         <div id="info-head-name"></div>
-      //     </div>
-      //     <div id="info-body">
-      //         <div id="info-body-field-names"></div>
-      //         <div id="info-body-field-values"></div>
-      //     </div>
-      // </div>
-      let selectionInfo = document.createElement("div");
-      selectionInfo.id = "selection-info";
-      let infoHeader = document.createElement("div");
-      infoHeader.id = "info-head";
-      let infoHeadStructure = document.createElement("div");
-      infoHeadStructure.id = "info-head-structure";
-      let infoHeadName = document.createElement("div");
-      infoHeadName.id = "info-head-name";
-      let infoBody = document.createElement("div");
-      infoBody.id = "info-body";
-      let infoBodyName = document.createElement("div");
-      infoBodyName.id = "info-body-field-names";
-      let infoBodyValues = document.createElement("div");
-      infoBodyValues.id = "info-body-field-values";
+      if (this.doPicks) {
+        // <div id="selection-info">
+        //     <div id="info-head">
+        //         <div id="info-head-structure"></div>
+        //         <div id="info-head-name"></div>
+        //     </div>
+        //     <div id="info-body">
+        //         <div id="info-body-field-names"></div>
+        //         <div id="info-body-field-values"></div>
+        //     </div>
+        // </div>
+        let selectionInfo = document.createElement("div");
+        selectionInfo.id = "selection-info";
+        let infoHeader = document.createElement("div");
+        infoHeader.id = "info-head";
+        let infoHeadStructure = document.createElement("div");
+        infoHeadStructure.id = "info-head-structure";
+        let infoHeadName = document.createElement("div");
+        infoHeadName.id = "info-head-name";
+        let infoBody = document.createElement("div");
+        infoBody.id = "info-body";
+        let infoBodyName = document.createElement("div");
+        infoBodyName.id = "info-body-field-names";
+        let infoBodyValues = document.createElement("div");
+        infoBodyValues.id = "info-body-field-values";
 
-      infoBody.appendChild(infoBodyName);
-      infoBody.appendChild(infoBodyValues);
-      infoHeader.appendChild(infoHeadStructure);
-      infoHeader.appendChild(infoHeadName);
-      selectionInfo.appendChild(infoHeader);
-      selectionInfo.appendChild(infoBody);
-      this.container.appendChild(selectionInfo);
+        infoBody.appendChild(infoBodyName);
+        infoBody.appendChild(infoBodyValues);
+        infoHeader.appendChild(infoHeadStructure);
+        infoHeader.appendChild(infoHeadName);
+        selectionInfo.appendChild(infoHeader);
+        selectionInfo.appendChild(infoBody);
+        this.container.appendChild(selectionInfo);
+      }
 
       // <div id="messages"><div></div></div>
       let messagePanel = document.createElement("div");
@@ -2993,17 +3011,19 @@
       this.renderer.setSize(this.parent.offsetWidth, this.parent.offsetHeight);
       this.container.appendChild(this.renderer.domElement);
 
-      this.pickRenderer = new THREE.WebGLRenderer({
-        antialias: false, // turn antialiasing off for color based picking
-      });
-      this.pickRenderer.setPixelRatio(window.devicePixelRatio);
-      this.pickRenderer.setClearColor(0xffffff, 1.0);
-      this.pickRenderer.setSize(
-        this.parent.offsetWidth,
-        this.parent.offsetHeight
-      );
-      // TODO: do I need to do this?
-      container.appendChild(this.pickRenderer.domElement);
+      if (this.doPicks) {
+        this.pickRenderer = new THREE.WebGLRenderer({
+          antialias: false, // turn antialiasing off for color based picking
+        });
+        this.pickRenderer.setPixelRatio(window.devicePixelRatio);
+        this.pickRenderer.setClearColor(0xffffff, 1.0);
+        this.pickRenderer.setSize(
+          this.parent.offsetWidth,
+          this.parent.offsetHeight
+        );
+        // TODO: do I need to do this?
+        container.appendChild(this.pickRenderer.domElement);
+      }
     }
 
     initGUI() {
@@ -3045,8 +3065,10 @@
       this.scene = new THREE.Scene();
       this.scene.background = new THREE.Color(0xffffff);
 
-      this.pickScene = new THREE.Scene();
-      this.pickScene.background = new THREE.Color(0xffffff);
+      if (this.doPicks) {
+        this.pickScene = new THREE.Scene();
+        this.pickScene.background = new THREE.Color(0xffffff);
+      }
     }
 
     initLights() {
@@ -3091,7 +3113,7 @@
       meshStructure.initGui(this.structureGuiFields, meshGui);
 
       this.scene.add(meshStructure.mesh);
-      this.pickScene.add(meshStructure.pickMesh);
+      if (this.doPicks) this.pickScene.add(meshStructure.pickMesh);
 
       let bbox = new THREE.Box3().setFromObject(meshStructure.mesh);
 
@@ -3176,7 +3198,7 @@
       cloudStructure.initGui(this.structureGuiFields, cloudGui);
 
       this.scene.add(cloudStructure.mesh);
-      this.pickScene.add(cloudStructure.pickMesh);
+      if (this.doPicks) this.pickScene.add(cloudStructure.pickMesh);
 
       return cloudStructure;
     }
@@ -3266,13 +3288,15 @@
     addEventListeners() {
       window.addEventListener("resize", this.onWindowResize.bind(this), false);
 
-      // attacking the eventListener to the renderer instead of the window ensures
-      // that clicking on the GUI doesn't trigger geoptic's mouseClick handler
-      this.renderer.domElement.addEventListener(
-        "click",
-        this.onMouseClick.bind(this),
-        false
-      );
+      if (this.doPicks) {
+        // attacking the eventListener to the renderer instead of the window ensures
+        // that clicking on the GUI doesn't trigger geoptic's mouseClick handler
+        this.renderer.domElement.addEventListener(
+          "click",
+          this.onMouseClick.bind(this),
+          false
+        );
+      }
     }
 
     onWindowResize() {

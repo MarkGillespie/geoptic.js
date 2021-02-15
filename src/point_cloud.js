@@ -29,7 +29,7 @@ class PointCloud {
     // build three.js mesh
     this.mesh = this.constructThreeMesh(coords);
 
-    this.pickMesh = this.constructThreePickMesh(coords);
+    if (this.gp.doPicks) this.pickMesh = this.constructThreePickMesh(coords);
 
     this.quantities = {};
 
@@ -102,7 +102,8 @@ class PointCloud {
 
   setRadius(rad) {
     this.mesh.material.uniforms.scale.value = rad;
-    this.pickMesh.material.uniforms.scale.value = rad;
+
+    if (this.gp.doPicks) this.pickMesh.material.uniforms.scale.value = rad;
   }
 
   setEnabled(enabled) {
@@ -119,13 +120,13 @@ class PointCloud {
       if (!enabledQuantity) {
         this.gp.scene.add(this.mesh);
       }
-      this.gp.pickScene.add(this.pickMesh);
+      if (this.gp.doPicks) this.gp.pickScene.add(this.pickMesh);
     } else {
       for (let q in this.quantities) {
         this.gp.scene.remove(this.quantities[q].mesh);
       }
       this.gp.scene.remove(this.mesh);
-      this.gp.pickScene.remove(this.pickMesh);
+      if (this.gp.doPicks) this.gp.pickScene.remove(this.pickMesh);
     }
   }
 

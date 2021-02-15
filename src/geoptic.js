@@ -38,6 +38,7 @@ class Geoptic {
     if (!WEBGL.isWebGLAvailable()) alert(WEBGL.getWebGLErrorMessage());
 
     this.geopticPath = options.path || "js/geoptic.js";
+
     this.parent = options.parent || document.body;
 
     this.input = undefined;
@@ -79,6 +80,13 @@ class Geoptic {
 
     this.sceneMin = new THREE.Vector3(0, 0, 0);
     this.sceneMax = new THREE.Vector3(0, 0, 0);
+
+    // If options.picks is set, do whatever that says. Otherwise, enable picks
+    this.doPicks =
+      (options.hasOwnProperty("picks") && options.picks) ||
+      !options.hasOwnProperty("picks");
+
+    this.init();
   }
 
   // must be called after onload
@@ -150,38 +158,40 @@ class Geoptic {
     this.container.style.position = "relative";
     this.parent.appendChild(this.container);
 
-    // <div id="selection-info">
-    //     <div id="info-head">
-    //         <div id="info-head-structure"></div>
-    //         <div id="info-head-name"></div>
-    //     </div>
-    //     <div id="info-body">
-    //         <div id="info-body-field-names"></div>
-    //         <div id="info-body-field-values"></div>
-    //     </div>
-    // </div>
-    let selectionInfo = document.createElement("div");
-    selectionInfo.id = "selection-info";
-    let infoHeader = document.createElement("div");
-    infoHeader.id = "info-head";
-    let infoHeadStructure = document.createElement("div");
-    infoHeadStructure.id = "info-head-structure";
-    let infoHeadName = document.createElement("div");
-    infoHeadName.id = "info-head-name";
-    let infoBody = document.createElement("div");
-    infoBody.id = "info-body";
-    let infoBodyName = document.createElement("div");
-    infoBodyName.id = "info-body-field-names";
-    let infoBodyValues = document.createElement("div");
-    infoBodyValues.id = "info-body-field-values";
+    if (this.doPicks) {
+      // <div id="selection-info">
+      //     <div id="info-head">
+      //         <div id="info-head-structure"></div>
+      //         <div id="info-head-name"></div>
+      //     </div>
+      //     <div id="info-body">
+      //         <div id="info-body-field-names"></div>
+      //         <div id="info-body-field-values"></div>
+      //     </div>
+      // </div>
+      let selectionInfo = document.createElement("div");
+      selectionInfo.id = "selection-info";
+      let infoHeader = document.createElement("div");
+      infoHeader.id = "info-head";
+      let infoHeadStructure = document.createElement("div");
+      infoHeadStructure.id = "info-head-structure";
+      let infoHeadName = document.createElement("div");
+      infoHeadName.id = "info-head-name";
+      let infoBody = document.createElement("div");
+      infoBody.id = "info-body";
+      let infoBodyName = document.createElement("div");
+      infoBodyName.id = "info-body-field-names";
+      let infoBodyValues = document.createElement("div");
+      infoBodyValues.id = "info-body-field-values";
 
-    infoBody.appendChild(infoBodyName);
-    infoBody.appendChild(infoBodyValues);
-    infoHeader.appendChild(infoHeadStructure);
-    infoHeader.appendChild(infoHeadName);
-    selectionInfo.appendChild(infoHeader);
-    selectionInfo.appendChild(infoBody);
-    this.container.appendChild(selectionInfo);
+      infoBody.appendChild(infoBodyName);
+      infoBody.appendChild(infoBodyValues);
+      infoHeader.appendChild(infoHeadStructure);
+      infoHeader.appendChild(infoHeadName);
+      selectionInfo.appendChild(infoHeader);
+      selectionInfo.appendChild(infoBody);
+      this.container.appendChild(selectionInfo);
+    }
 
     // <div id="messages"><div></div></div>
     let messagePanel = document.createElement("div");
@@ -251,17 +261,19 @@ class Geoptic {
     this.renderer.setSize(this.parent.offsetWidth, this.parent.offsetHeight);
     this.container.appendChild(this.renderer.domElement);
 
-    this.pickRenderer = new THREE.WebGLRenderer({
-      antialias: false, // turn antialiasing off for color based picking
-    });
-    this.pickRenderer.setPixelRatio(window.devicePixelRatio);
-    this.pickRenderer.setClearColor(0xffffff, 1.0);
-    this.pickRenderer.setSize(
-      this.parent.offsetWidth,
-      this.parent.offsetHeight
-    );
-    // TODO: do I need to do this?
-    container.appendChild(this.pickRenderer.domElement);
+    if (this.doPicks) {
+      this.pickRenderer = new THREE.WebGLRenderer({
+        antialias: false, // turn antialiasing off for color based picking
+      });
+      this.pickRenderer.setPixelRatio(window.devicePixelRatio);
+      this.pickRenderer.setClearColor(0xffffff, 1.0);
+      this.pickRenderer.setSize(
+        this.parent.offsetWidth,
+        this.parent.offsetHeight
+      );
+      // TODO: do I need to do this?
+      container.appendChild(this.pickRenderer.domElement);
+    }
   }
 
   initGUI() {
@@ -303,8 +315,10 @@ class Geoptic {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0xffffff);
 
-    this.pickScene = new THREE.Scene();
-    this.pickScene.background = new THREE.Color(0xffffff);
+    if (this.doPicks) {
+      this.pickScene = new THREE.Scene();
+      this.pickScene.background = new THREE.Color(0xffffff);
+    }
   }
 
   initLights() {
@@ -349,7 +363,7 @@ class Geoptic {
     meshStructure.initGui(this.structureGuiFields, meshGui);
 
     this.scene.add(meshStructure.mesh);
-    this.pickScene.add(meshStructure.pickMesh);
+    if (this.doPicks) this.pickScene.add(meshStructure.pickMesh);
 
     let bbox = new THREE.Box3().setFromObject(meshStructure.mesh);
 
@@ -434,7 +448,7 @@ class Geoptic {
     cloudStructure.initGui(this.structureGuiFields, cloudGui);
 
     this.scene.add(cloudStructure.mesh);
-    this.pickScene.add(cloudStructure.pickMesh);
+    if (this.doPicks) this.pickScene.add(cloudStructure.pickMesh);
 
     return cloudStructure;
   }
@@ -524,13 +538,15 @@ class Geoptic {
   addEventListeners() {
     window.addEventListener("resize", this.onWindowResize.bind(this), false);
 
-    // attacking the eventListener to the renderer instead of the window ensures
-    // that clicking on the GUI doesn't trigger geoptic's mouseClick handler
-    this.renderer.domElement.addEventListener(
-      "click",
-      this.onMouseClick.bind(this),
-      false
-    );
+    if (this.doPicks) {
+      // attacking the eventListener to the renderer instead of the window ensures
+      // that clicking on the GUI doesn't trigger geoptic's mouseClick handler
+      this.renderer.domElement.addEventListener(
+        "click",
+        this.onMouseClick.bind(this),
+        false
+      );
+    }
   }
 
   onWindowResize() {
