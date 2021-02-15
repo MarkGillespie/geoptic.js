@@ -1294,7 +1294,6 @@
 
     setEnabled(enabled) {
       this.options.enabled = enabled;
-      this.enabled = enabled;
       if (enabled) {
         this.parent.enableQuantity(this);
       } else {
@@ -2170,7 +2169,7 @@
           let p = this.quantities[pName];
           if (p.isDominantQuantity && pName != q.name) {
             this.options.enabled = false;
-            p.enabled = false;
+            p.options.enabled = false;
             this.gp.scene.remove(p.mesh);
           }
         }

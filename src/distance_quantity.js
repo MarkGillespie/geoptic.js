@@ -130,7 +130,6 @@ class VertexDistanceQuantity {
 
   setEnabled(enabled) {
     this.options.enabled = enabled;
-    this.enabled = enabled;
     if (enabled) {
       this.parent.enableQuantity(this);
     } else {
