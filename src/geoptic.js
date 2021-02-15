@@ -414,6 +414,43 @@ class Geoptic {
     return standardizedFaces;
   }
 
+  standardizeVector2Array(array) {
+    let get = undefined;
+    if (array.get) {
+      get = (iV) => array.get(iV);
+    } else {
+      get = (iV) => array[iV];
+    }
+
+    let getDim = undefined;
+    if (get(0).x) {
+      getDim = function (coord, iD) {
+        if (iD == 0) {
+          return coord.x;
+        } else {
+          return coord.y;
+        }
+      };
+    } else {
+      getDim = (coord, iD) => coord[iD];
+    }
+
+    let size = undefined;
+    if (array.size) {
+      size = array.size();
+    } else {
+      size = array.length;
+    }
+
+    const standardizedArray = [];
+    let pos = undefined;
+    for (let iV = 0; iV < size; iV++) {
+      pos = get(iV);
+      standardizedArray.push([getDim(pos, 0), getDim(pos, 1)]);
+    }
+    return standardizedArray;
+  }
+
   registerSurfaceMesh(name, vertexCoordinates, faces, scale = 1) {
     vertexCoordinates = this.standardizePositionArray(vertexCoordinates);
     faces = this.standardizeFaceArray(faces);

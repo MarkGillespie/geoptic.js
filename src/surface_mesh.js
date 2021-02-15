@@ -83,7 +83,7 @@ class SurfaceMesh {
   }
 
   addVertexParameterizationQuantity(name, values) {
-    this.gp.standardizeDataArray(values);
+    values = this.gp.standardizeVector2Array(values);
     this.quantities[name] = new VertexParameterizationQuantity(
       name,
       values,

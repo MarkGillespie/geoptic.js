@@ -149,31 +149,15 @@ class VertexParameterizationQuantity {
   }
 
   initParam(coords) {
-    if (coords.get(0).x) {
-      this.getDim = function (coord, iD) {
-        if (iD == 0) {
-          return coord.x;
-        } else if (iD == 1) {
-          return coord.y;
-        } else {
-          return coord.z;
-        }
-      };
-    } else {
-      this.getDim = function (coord, iD) {
-        return coord[iD];
-      };
-    }
-
     // fill position and barycoord buffers
-    let F = this.parent.faces.size();
+    let F = this.parent.faces.length;
     let coordArray = new Float32Array(F * 3 * 2);
     for (let iF = 0; iF < F; iF++) {
-      let face = this.parent.faces.get(iF);
+      let face = this.parent.faces[iF];
       for (let iV = 0; iV < 3; iV++) {
-        let coord = coords.get(this.parent.getCorner(face, iV));
+        let coord = coords[face[iV]];
         for (let iD = 0; iD < 2; ++iD) {
-          coordArray[3 * 2 * iF + 2 * iV + iD] = this.getDim(coord, iD);
+          coordArray[3 * 2 * iF + 2 * iV + iD] = coord[iD];
         }
       }
     }
@@ -185,7 +169,7 @@ class VertexParameterizationQuantity {
   }
 
   getVertexValue(iV) {
-    return this.gp.prettyVector2(this.coords.get(iV));
+    return this.gp.prettyVector2(this.coords[iV]);
   }
   getEdgeValue(iE) {
     return undefined;
