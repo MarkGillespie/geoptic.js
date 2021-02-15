@@ -1,4 +1,4 @@
-import { ShaderMaterial, Vector3, DoubleSide, WebGLRenderTarget, Mesh, BufferAttribute, TextureLoader, InstancedMesh, InstancedBufferAttribute, CylinderGeometry, Matrix4, Group, Euler, BufferGeometry, IcosahedronGeometry, SphereGeometry, PlaneGeometry, WebGLRenderer, PerspectiveCamera, Scene, Color, AmbientLight, PointLight, Box3 } from 'https://unpkg.com/three@0.125.1/build/three.module.js';
+import { ShaderMaterial, Vector3, DoubleSide, WebGLRenderTarget, TextureLoader, Mesh, BufferAttribute, InstancedMesh, InstancedBufferAttribute, CylinderGeometry, Matrix4, Group, Euler, BufferGeometry, IcosahedronGeometry, SphereGeometry, PlaneGeometry, WebGLRenderer, PerspectiveCamera, Scene, Color, AmbientLight, PointLight, Box3 } from 'https://unpkg.com/three@0.125.1/build/three.module.js';
 import { TrackballControls } from 'https://unpkg.com/three@0.125.1/examples/jsm/controls/TrackballControls.js';
 import { WEBGL } from 'https://unpkg.com/three@0.125.1/examples/jsm/WebGL.js';
 import { Reflector } from 'https://unpkg.com/three@0.125.1/examples/jsm/objects/Reflector.js';
@@ -929,6 +929,17 @@ const availableColorMaps = [
   "rdpu",
 ];
 
+const colorMaps = {};
+
+function getColorMap(gp, cm) {
+  if (!colorMaps[cm]) {
+    colorMaps[cm] = new TextureLoader().load(
+      gp.geopticPath + "/img/colormaps/" + cm + ".png"
+    );
+  }
+  return colorMaps[cm];
+}
+
 function computeMinMax(values) {
   let min = values[0];
   let max = values[0];
@@ -1025,9 +1036,7 @@ class VertexScalarQuantity {
   }
 
   applyColorMap(cm) {
-    this.mesh.material.uniforms.colormap.value = new TextureLoader().load(
-      this.gp.geopticPath + "/img/colormaps/" + cm + ".png"
-    );
+    this.mesh.material.uniforms.colormap.value = getColorMap(this.gp, cm);
   }
 
   getOptions() {
@@ -1145,9 +1154,7 @@ class PointCloudScalarQuantity {
   }
 
   applyColorMap(cm) {
-    this.mesh.material.uniforms.colormap.value = new TextureLoader().load(
-      this.gp.geopticPath + "/img/colormaps/" + cm + ".png"
-    );
+    this.mesh.material.uniforms.colormap.value = getColorMap(this.gp, cm);
   }
 
   getOptions() {
@@ -1207,9 +1214,6 @@ class VertexDistanceQuantity {
 
     // build a three.js mesh to visualize the function
     this.mesh = new Mesh(this.parent.mesh.geometry.clone(), functionMaterial);
-    this.mesh.material.uniforms.colormap.value = new TextureLoader().load(
-      this.gp.geopticPath + "/img/colormaps/rdpu.png"
-    );
     this.initializeDistances(this.values);
 
     this.options = {
@@ -1330,9 +1334,7 @@ class VertexDistanceQuantity {
   }
 
   applyColorMap(cm) {
-    this.mesh.material.uniforms.colormap.value = new TextureLoader().load(
-      this.gp.geopticPath + "/img/colormaps/" + cm + ".png"
-    );
+    this.mesh.material.uniforms.colormap.value = getColorMap(this.gp, cm);
   }
 
   getVertexValue(iV) {
@@ -3034,7 +3036,7 @@ class Geoptic {
     this.container.append(this.stats.dom);
 
     this.initRenderer(this.container);
-    this.initMatcap();
+    this.initTextures();
     this.initGUI();
     this.initCamera();
     this.initScene();
@@ -3130,7 +3132,7 @@ class Geoptic {
     this.input.click();
   }
 
-  initMatcap() {
+  initTextures() {
     this.matcapTextures = {
       r: undefined,
       g: undefined,
@@ -3149,6 +3151,10 @@ class Geoptic {
     this.matcapTextures.k = new TextureLoader().load(
       this.geopticPath + "/img/clay_k.png"
     );
+
+    // Pre-fetch viridis colormap (default) and rdpu colormap (default for distances)
+    getColorMap(this, "viridis");
+    getColorMap(this, "rdpu");
   }
 
   initRenderer(container) {

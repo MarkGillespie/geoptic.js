@@ -931,6 +931,17 @@
     "rdpu",
   ];
 
+  const colorMaps = {};
+
+  function getColorMap(gp, cm) {
+    if (!colorMaps[cm]) {
+      colorMaps[cm] = new THREE.TextureLoader().load(
+        gp.geopticPath + "/img/colormaps/" + cm + ".png"
+      );
+    }
+    return colorMaps[cm];
+  }
+
   function computeMinMax(values) {
     let min = values[0];
     let max = values[0];
@@ -1027,9 +1038,7 @@
     }
 
     applyColorMap(cm) {
-      this.mesh.material.uniforms.colormap.value = new THREE.TextureLoader().load(
-        this.gp.geopticPath + "/img/colormaps/" + cm + ".png"
-      );
+      this.mesh.material.uniforms.colormap.value = getColorMap(this.gp, cm);
     }
 
     getOptions() {
@@ -1147,9 +1156,7 @@
     }
 
     applyColorMap(cm) {
-      this.mesh.material.uniforms.colormap.value = new THREE.TextureLoader().load(
-        this.gp.geopticPath + "/img/colormaps/" + cm + ".png"
-      );
+      this.mesh.material.uniforms.colormap.value = getColorMap(this.gp, cm);
     }
 
     getOptions() {
@@ -1209,9 +1216,6 @@
 
       // build a three.js mesh to visualize the function
       this.mesh = new THREE.Mesh(this.parent.mesh.geometry.clone(), functionMaterial);
-      this.mesh.material.uniforms.colormap.value = new THREE.TextureLoader().load(
-        this.gp.geopticPath + "/img/colormaps/rdpu.png"
-      );
       this.initializeDistances(this.values);
 
       this.options = {
@@ -1332,9 +1336,7 @@
     }
 
     applyColorMap(cm) {
-      this.mesh.material.uniforms.colormap.value = new THREE.TextureLoader().load(
-        this.gp.geopticPath + "/img/colormaps/" + cm + ".png"
-      );
+      this.mesh.material.uniforms.colormap.value = getColorMap(this.gp, cm);
     }
 
     getVertexValue(iV) {
@@ -3036,7 +3038,7 @@
       this.container.append(this.stats.dom);
 
       this.initRenderer(this.container);
-      this.initMatcap();
+      this.initTextures();
       this.initGUI();
       this.initCamera();
       this.initScene();
@@ -3132,7 +3134,7 @@
       this.input.click();
     }
 
-    initMatcap() {
+    initTextures() {
       this.matcapTextures = {
         r: undefined,
         g: undefined,
@@ -3151,6 +3153,10 @@
       this.matcapTextures.k = new THREE.TextureLoader().load(
         this.geopticPath + "/img/clay_k.png"
       );
+
+      // Pre-fetch viridis colormap (default) and rdpu colormap (default for distances)
+      getColorMap(this, "viridis");
+      getColorMap(this, "rdpu");
     }
 
     initRenderer(container) {

@@ -1,4 +1,4 @@
-import { Color } from "https://unpkg.com/three@0.125.1/build/three.module.js";
+import { TextureLoader } from "https://unpkg.com/three@0.125.1/build/three.module.js";
 
 const availableColorMaps = [
   "viridis",
@@ -16,4 +16,15 @@ const availableColorMaps = [
   "rdpu",
 ];
 
-export { availableColorMaps };
+const colorMaps = {};
+
+function getColorMap(gp, cm) {
+  if (!colorMaps[cm]) {
+    colorMaps[cm] = new TextureLoader().load(
+      gp.geopticPath + "/img/colormaps/" + cm + ".png"
+    );
+  }
+  return colorMaps[cm];
+}
+
+export { availableColorMaps, getColorMap };

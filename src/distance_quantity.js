@@ -7,12 +7,11 @@ import {
   InstancedMesh,
   Color,
   Matrix4,
-  TextureLoader,
 } from "https://unpkg.com/three@0.125.1/build/three.module.js";
 
 import { createVertexDistanceFunctionMaterial } from "./shaders.js";
 
-import { availableColorMaps } from "./color_maps.js";
+import { availableColorMaps, getColorMap } from "./color_maps.js";
 
 function computeMinMax(values) {
   let min = values[0];
@@ -45,9 +44,6 @@ class VertexDistanceQuantity {
 
     // build a three.js mesh to visualize the function
     this.mesh = new Mesh(this.parent.mesh.geometry.clone(), functionMaterial);
-    this.mesh.material.uniforms.colormap.value = new TextureLoader().load(
-      this.gp.geopticPath + "/img/colormaps/rdpu.png"
-    );
     this.initializeDistances(this.values);
 
     this.options = {
@@ -168,9 +164,7 @@ class VertexDistanceQuantity {
   }
 
   applyColorMap(cm) {
-    this.mesh.material.uniforms.colormap.value = new TextureLoader().load(
-      this.gp.geopticPath + "/img/colormaps/" + cm + ".png"
-    );
+    this.mesh.material.uniforms.colormap.value = getColorMap(this.gp, cm);
   }
 
   getVertexValue(iV) {

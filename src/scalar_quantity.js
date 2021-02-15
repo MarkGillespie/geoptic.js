@@ -5,7 +5,6 @@ import {
   Vector3,
   Mesh,
   InstancedMesh,
-  TextureLoader,
   Color,
   Matrix4,
 } from "https://unpkg.com/three@0.125.1/build/three.module.js";
@@ -15,7 +14,7 @@ import {
   createInstancedScalarFunctionMaterial,
 } from "./shaders.js";
 
-import { availableColorMaps } from "./color_maps.js";
+import { availableColorMaps, getColorMap } from "./color_maps.js";
 
 function computeMinMax(values) {
   let min = values[0];
@@ -113,9 +112,7 @@ class VertexScalarQuantity {
   }
 
   applyColorMap(cm) {
-    this.mesh.material.uniforms.colormap.value = new TextureLoader().load(
-      this.gp.geopticPath + "/img/colormaps/" + cm + ".png"
-    );
+    this.mesh.material.uniforms.colormap.value = getColorMap(this.gp, cm);
   }
 
   getOptions() {
@@ -233,9 +230,7 @@ class PointCloudScalarQuantity {
   }
 
   applyColorMap(cm) {
-    this.mesh.material.uniforms.colormap.value = new TextureLoader().load(
-      this.gp.geopticPath + "/img/colormaps/" + cm + ".png"
-    );
+    this.mesh.material.uniforms.colormap.value = getColorMap(this.gp, cm);
   }
 
   getOptions() {

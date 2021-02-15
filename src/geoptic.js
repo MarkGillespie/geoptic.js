@@ -16,6 +16,7 @@ import { PointCloud } from "./point_cloud.js";
 import { evaluatePickQuery } from "./pick.js";
 import { CurveNetwork } from "./curve_network.js";
 import { getNextUniqueColor } from "./color_utils.js";
+import { getColorMap } from "./color_maps.js";
 import {
   standardizeVector3Array,
   standardizeFaceArray,
@@ -141,7 +142,7 @@ class Geoptic {
     this.container.append(this.stats.dom);
 
     this.initRenderer(this.container);
-    this.initMatcap();
+    this.initTextures();
     this.initGUI();
     this.initCamera();
     this.initScene();
@@ -238,7 +239,7 @@ class Geoptic {
     this.input.click();
   }
 
-  initMatcap() {
+  initTextures() {
     this.matcapTextures = {
       r: undefined,
       g: undefined,
@@ -257,6 +258,10 @@ class Geoptic {
     this.matcapTextures.k = new THREE.TextureLoader().load(
       this.geopticPath + "/img/clay_k.png"
     );
+
+    // Pre-fetch viridis colormap (default) and rdpu colormap (default for distances)
+    getColorMap(this, "viridis");
+    getColorMap(this, "rdpu");
   }
 
   initRenderer(container) {
