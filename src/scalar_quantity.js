@@ -125,10 +125,10 @@ class VertexScalarQuantity {
 
   setOptions(options) {
     if (options.hasOwnProperty("colormap")) {
-      this.options.colormap = options.colormap;
+      this.setColorMap(options.colormap);
     }
     if (options.hasOwnProperty("enabled")) {
-      this.options.enabled = options.enabled;
+      this.setEnabled(options.enabled);
     }
   }
 
@@ -240,10 +240,10 @@ class PointCloudScalarQuantity {
 
   setOptions(options) {
     if (options.hasOwnProperty("colormap")) {
-      this.options.colormap = options.colormap;
+      this.setColormap(options.colormap);
     }
     if (options.hasOwnProperty("enabled")) {
-      this.options.enabled = options.enabled;
+      this.setEnabled(options.enabled);
     }
   }
 

@@ -1039,10 +1039,10 @@
 
     setOptions(options) {
       if (options.hasOwnProperty("colormap")) {
-        this.options.colormap = options.colormap;
+        this.setColorMap(options.colormap);
       }
       if (options.hasOwnProperty("enabled")) {
-        this.options.enabled = options.enabled;
+        this.setEnabled(options.enabled);
       }
     }
 
@@ -1154,10 +1154,10 @@
 
     setOptions(options) {
       if (options.hasOwnProperty("colormap")) {
-        this.options.colormap = options.colormap;
+        this.setColormap(options.colormap);
       }
       if (options.hasOwnProperty("enabled")) {
-        this.options.enabled = options.enabled;
+        this.setEnabled(options.enabled);
       }
     }
 
@@ -2473,12 +2473,6 @@
       this.name = name;
       this.enabled = true;
 
-      this.options = { radius: 1, enabled: true };
-      this.options.color = this.options.color || getNextUniqueColor();
-      Object.assign(this.options, options);
-
-      this.setOptions(this.options);
-
       // build three.js mesh
       this.mesh = this.constructThreeMesh(coords);
 
@@ -2487,6 +2481,12 @@
       this.quantities = {};
 
       this.guiFolder = undefined;
+
+      this.options = { radius: 1, enabled: true };
+      this.options.color = this.options.color || getNextUniqueColor();
+      Object.assign(this.options, options);
+
+      this.setOptions(this.options);
     }
 
     addScalarQuantity(name, values) {
@@ -2548,13 +2548,13 @@
 
     setOptions(options) {
       if (options.hasOwnProperty("color")) {
-        this.options.color = options.color;
+        this.setColor(options.color);
       }
       if (options.hasOwnProperty("radius")) {
-        this.options.radius = options.radius;
+        this.setRadius(options.radius);
       }
       if (options.hasOwnProperty("enabled")) {
-        this.options.enabled = options.enabled;
+        this.setEnabled(options.enabled);
       }
     }
 
