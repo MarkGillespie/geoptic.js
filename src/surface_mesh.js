@@ -372,7 +372,7 @@ class SurfaceMesh {
 
     // After translating, we re-apply the old rotation
     this.mesh.setRotationFromEuler(oldRot);
-    this.pickMesh.setRotationFromEuler(oldRot);
+    if (this.gp.doPicks) this.pickMesh.setRotationFromEuler(oldRot);
   }
 
   setOrientationFromMatrix(mat) {
