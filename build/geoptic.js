@@ -2486,6 +2486,8 @@
       Object.assign(this.options, options);
 
       this.setOptions(this.options);
+
+      this.vertexPickCallback = (iV) => {};
     }
 
     addScalarQuantity(name, values) {
@@ -2662,6 +2664,8 @@
           this.gp.showDataField(qName, qVal);
         }
       }
+
+      this.vertexPickCallback(localInd);
     }
 
     // must be called after constructThreeMesh

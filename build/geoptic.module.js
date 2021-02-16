@@ -2484,6 +2484,8 @@ class PointCloud {
     Object.assign(this.options, options);
 
     this.setOptions(this.options);
+
+    this.vertexPickCallback = (iV) => {};
   }
 
   addScalarQuantity(name, values) {
@@ -2660,6 +2662,8 @@ class PointCloud {
         this.gp.showDataField(qName, qVal);
       }
     }
+
+    this.vertexPickCallback(localInd);
   }
 
   // must be called after constructThreeMesh
