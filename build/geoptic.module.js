@@ -419,6 +419,121 @@ function VertexParamGrid(tex_r, tex_g, tex_b, tex_k) {
   return Material;
 }
 
+function VertexParamTartan(tex_r, tex_g, tex_b, tex_k) {
+  let vertexShader = `
+        attribute vec3 barycoord;
+        attribute vec2 coord;
+
+        varying vec2 Point;
+        varying vec3 Barycoord;
+        varying vec2 Coord;
+
+        void main()
+        {
+            vec3 vNormal = ( mat3( modelViewMatrix ) * normal );
+            vNormal = normalize(vNormal);
+
+            // pull slightly inward, to reduce sampling artifacts near edges
+            Point.x = 0.93 * vNormal.x * 0.5 + 0.5;
+            Point.y = 0.93 * vNormal.y * 0.5 + 0.5;
+
+            Barycoord = barycoord;
+            Coord = coord;
+
+            gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+
+        }
+    `;
+
+  let fragmentShader = `
+        ${matcapIncludes}
+        uniform vec3 edgeColor;
+        uniform float edgeWidth;
+        uniform vec3 color1;
+        uniform vec3 color2;
+        uniform float paramScale;
+
+        varying vec2 Point;
+        varying vec3 Barycoord;
+        varying vec2 Coord;
+
+        ${common}
+
+
+        vec3 STRIPE(float x, float y, float center, float width, vec3 oldcolor,
+                    vec3 newcolor, bool shift) {
+            float stripe_coord = mod(x - y, 0.05);
+            if ((stripe_coord < 0.5 * 0.05) != shift) {
+                if (abs(x - center) < width) {
+                    return newcolor;
+                } else if (abs(x - (1. - center)) < width) {
+                    return newcolor;
+                }
+            } else {
+                if (abs(y - center) < width) {
+                    return newcolor + vec3(0.02, 0.02, 0.02);
+                } else if (abs(y - (1. - center)) < width) {
+                    return newcolor + vec3(0.02, 0.02, 0.02);
+                }
+            }
+            return oldcolor;
+        }
+
+        void main(void){
+            float alpha = getEdgeFactor(Barycoord, vec3(1.,1.,1.), edgeWidth);
+
+            // // Works correctly on negative x, y
+            // float modX = Coord.x - floor(Coord.x);
+            // float modY = Coord.y - floor(Coord.y);
+            // Apply the checkerboard effect
+            float mX = mod(Coord.x, 2.0 * 2.*paramScale) / (2.*paramScale) - 1.f; // in [-1, 1]
+            float mY = mod(Coord.y, 2.0 * 2.*paramScale) / (2.*paramScale) - 1.f;
+
+            vec3 blue = vec3(18.0 / 255., 18.0 / 255., 80.0 / 255.);
+            vec3 green = vec3(0.00, 0.40, 0.20);
+            vec3 dark_green = vec3(0.00, 0.10, 0.10);
+            vec3 dark = vec3(0.00, 0.02, 0.13);
+            vec3 red = vec3(0.80, 0.00, 0.00);
+            vec3 yellow = vec3(1.00, 0.70, 0.00);
+
+            vec3 outColor = dark_green;
+
+            outColor = STRIPE(mX, mY, 0.000, 1.000, outColor, blue, true);
+            outColor = STRIPE(mX, mY, 0.000, 0.225, outColor, dark_green, false);
+            outColor = STRIPE(mX, mY, 0.000, 0.225, outColor, green, true);
+            outColor = STRIPE(mX, mY, 0.275, 0.050, outColor, dark, false);
+            outColor = STRIPE(mX, mY, 0.150, 0.020, outColor, red, true);
+            outColor = STRIPE(mX, mY, 0.110, 0.004, outColor, red, true);
+            outColor = STRIPE(mX, mY, 0.325, 0.004, outColor, red, true);
+            outColor = STRIPE(mX, mY, 0.420, 0.020, outColor, red, true);
+            outColor = STRIPE(mX, mY, 0.460, 0.004, outColor, red, true);
+            outColor = STRIPE(mX, mY, 0.000, 0.010, outColor, yellow, true);
+
+            gl_FragColor = lightSurfaceMat((1.-alpha) * outColor + alpha * edgeColor, Point);
+
+        }
+    `;
+
+  let Material = new ShaderMaterial({
+    uniforms: {
+      Matcap_r: { value: tex_r },
+      Matcap_g: { value: tex_g },
+      Matcap_b: { value: tex_b },
+      Matcap_k: { value: tex_k },
+      edgeColor: { value: new Vector3(0, 0, 0) },
+      edgeWidth: { value: 0 },
+      color1: { value: new Vector3(1, 1, 0) },
+      color2: { value: new Vector3(0, 1, 1) },
+      paramScale: { value: 1 },
+    },
+    vertexShader,
+    fragmentShader,
+  });
+  Material.side = DoubleSide;
+
+  return Material;
+}
+
 let groundPlaneVertexShader = `
   uniform mat4 textureMatrix;
   attribute vec2 texture_uv;
@@ -1556,6 +1671,8 @@ class VertexParameterizationQuantity {
     this.mesh.material.uniforms.edgeWidth = this.parent.mesh.material.uniforms.edgeWidth;
     this.mesh.material.uniforms.edgeColor = this.parent.mesh.material.uniforms.edgeColor;
 
+    this.colorButtons = [];
+
     this.options = {
       enabled: false,
       style: "checker",
@@ -1577,28 +1694,32 @@ class VertexParameterizationQuantity {
       .name("Enabled");
 
     guiFolder
-      .add(this.options, "style", ["checker", "grid"])
+      .add(this.options, "style", ["checker", "grid", "tartan"])
       .onChange((s) => {
         this.setStyle(s);
       })
       .listen()
       .name("Color Map");
 
-    guiFolder
+    const color1Button = guiFolder
       .addColor(this.options, "color1")
       .onChange((c) => {
         this.setColor1(c);
       })
       .listen()
       .name("Color");
+    let row = color1Button.domElement.closest("li");
+    this.colorButtons.push(row);
 
-    guiFolder
+    const color2Button = guiFolder
       .addColor(this.options, "color2")
       .onChange((c) => {
         this.setColor2(c);
       })
       .listen()
       .name("Color");
+    row = color2Button.domElement.closest("li");
+    this.colorButtons.push(row);
 
     guiFolder
       .add(this.options, "scale")
@@ -1647,6 +1768,9 @@ class VertexParameterizationQuantity {
         this.gp.matcapTextures.b,
         this.gp.matcapTextures.k
       );
+      for (let elem of this.colorButtons) {
+        elem.style.display = "block";
+      }
     } else if (style == "grid") {
       this.mesh.material = VertexParamGrid(
         this.gp.matcapTextures.r,
@@ -1654,6 +1778,19 @@ class VertexParameterizationQuantity {
         this.gp.matcapTextures.b,
         this.gp.matcapTextures.k
       );
+      for (let elem of this.colorButtons) {
+        elem.style.display = "block";
+      }
+    } else if (style == "tartan") {
+      this.mesh.material = VertexParamTartan(
+        this.gp.matcapTextures.r,
+        this.gp.matcapTextures.g,
+        this.gp.matcapTextures.b,
+        this.gp.matcapTextures.k
+      );
+      for (let elem of this.colorButtons) {
+        elem.style.display = "none";
+      }
     }
     // Reset material uniforms
     this.setColor1(this.options.color1);

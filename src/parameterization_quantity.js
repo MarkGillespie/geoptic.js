@@ -9,7 +9,11 @@ import {
   Matrix4,
 } from "https://unpkg.com/three@0.125.1/build/three.module.js";
 
-import { VertexParamCheckerboard, VertexParamGrid } from "./shaders.js";
+import {
+  VertexParamCheckerboard,
+  VertexParamGrid,
+  VertexParamTartan,
+} from "./shaders.js";
 
 class VertexParameterizationQuantity {
   constructor(name, coords, parentMesh, options = {}) {
@@ -38,6 +42,8 @@ class VertexParameterizationQuantity {
     this.mesh.material.uniforms.edgeWidth = this.parent.mesh.material.uniforms.edgeWidth;
     this.mesh.material.uniforms.edgeColor = this.parent.mesh.material.uniforms.edgeColor;
 
+    this.colorButtons = [];
+
     this.options = {
       enabled: false,
       style: "checker",
@@ -59,7 +65,7 @@ class VertexParameterizationQuantity {
       .name("Enabled");
 
     guiFolder
-      .add(this.options, "style", ["checker", "grid"])
+      .add(this.options, "style", ["checker", "grid", "tartan"])
       .onChange((s) => {
         this.setStyle(s);
       })
@@ -73,6 +79,8 @@ class VertexParameterizationQuantity {
       })
       .listen()
       .name("Color");
+    let row = color1Button.domElement.closest("li");
+    this.colorButtons.push(row);
 
     const color2Button = guiFolder
       .addColor(this.options, "color2")
@@ -81,8 +89,10 @@ class VertexParameterizationQuantity {
       })
       .listen()
       .name("Color");
+    row = color2Button.domElement.closest("li");
+    this.colorButtons.push(row);
 
-    const edgeWidthInput = guiFolder
+    const scaleInput = guiFolder
       .add(this.options, "scale")
       .min(0)
       .max(2)
@@ -129,6 +139,9 @@ class VertexParameterizationQuantity {
         this.gp.matcapTextures.b,
         this.gp.matcapTextures.k
       );
+      for (let elem of this.colorButtons) {
+        elem.style.display = "block";
+      }
     } else if (style == "grid") {
       this.mesh.material = VertexParamGrid(
         this.gp.matcapTextures.r,
@@ -136,6 +149,19 @@ class VertexParameterizationQuantity {
         this.gp.matcapTextures.b,
         this.gp.matcapTextures.k
       );
+      for (let elem of this.colorButtons) {
+        elem.style.display = "block";
+      }
+    } else if (style == "tartan") {
+      this.mesh.material = VertexParamTartan(
+        this.gp.matcapTextures.r,
+        this.gp.matcapTextures.g,
+        this.gp.matcapTextures.b,
+        this.gp.matcapTextures.k
+      );
+      for (let elem of this.colorButtons) {
+        elem.style.display = "none";
+      }
     }
     // Reset material uniforms
     this.setColor1(this.options.color1);
