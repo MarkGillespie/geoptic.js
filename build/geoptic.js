@@ -426,7 +426,7 @@
         attribute vec3 barycoord;
         attribute vec2 coord;
 
-        varying vec2 Point;
+        varying vec3 Normal;
         varying vec3 Barycoord;
         varying vec2 Coord;
 
@@ -435,9 +435,7 @@
             vec3 vNormal = ( mat3( modelViewMatrix ) * normal );
             vNormal = normalize(vNormal);
 
-            // pull slightly inward, to reduce sampling artifacts near edges
-            Point.x = 0.93 * vNormal.x * 0.5 + 0.5;
-            Point.y = 0.93 * vNormal.y * 0.5 + 0.5;
+            Normal = vNormal;
 
             Barycoord = barycoord;
             Coord = coord;
@@ -455,30 +453,46 @@
         uniform vec3 color2;
         uniform float paramScale;
 
-        varying vec2 Point;
+        varying vec3 Normal;
         varying vec3 Barycoord;
         varying vec2 Coord;
 
         ${common}
 
+        void STRIPE(float x, float y, float center, float width, inout float bumpHeight,
+                    inout vec3 oldcolor, vec3 newcolor, bool shift) {
+            float sWidth = 0.05;
+            float stripe_coord = mod(x - y + sWidth*0.25, sWidth);
+            float slopeWidthPix = 5.;
+            vec2 fw = fwidth(Coord);
+            float scale = max(fw.x, fw.y);
+            float pWidth = slopeWidthPix * scale;
 
-        vec3 STRIPE(float x, float y, float center, float width, vec3 oldcolor,
-                    vec3 newcolor, bool shift) {
-            float stripe_coord = mod(x - y, 0.05);
-            if ((stripe_coord < 0.5 * 0.05) != shift) {
-                if (abs(x - center) < width) {
-                    return newcolor;
-                } else if (abs(x - (1. - center)) < width) {
-                    return newcolor;
-                }
-            } else {
-                if (abs(y - center) < width) {
-                    return newcolor + vec3(0.02, 0.02, 0.02);
-                } else if (abs(y - (1. - center)) < width) {
-                    return newcolor + vec3(0.02, 0.02, 0.02);
-                }
-            }
-            return oldcolor;
+            float stripeD = abs(stripe_coord - 0.5*sWidth);
+            float t = smoothstep(0.25*sWidth-pWidth, 0.25*sWidth+pWidth, stripeD);
+            if (shift) t = 1.-t;
+
+            float minDx = min(abs(x-center), abs(x-(1.-center)));
+            float sx = smoothstep(width-pWidth, width + pWidth, minDx);
+            vec3 newcolorx = (sx)*oldcolor + (1.-sx)* newcolor;
+            float bumpHeightx = sqrt(1.-(1.-sx)*pow(abs(minDx / width), 0.5));
+
+            float minDy = min(abs(y-center), abs(y-(1.-center)));
+            float sy = smoothstep(width, width + pWidth, minDy);
+            vec3 newcolory = (sy)*oldcolor + (1.-sy)* (newcolor+vec3(0.02,0.02,0.02));
+            float bumpHeighty = sqrt(1.-(1.-sy)*pow(abs(minDy / width), 0.5));
+
+            bumpHeight *= (t * bumpHeightx + (1.-t)*bumpHeighty);
+            oldcolor = t * newcolorx + (1.-t) * newcolory;
+
+        }
+
+        void base_stripe_bumps(float x, float y, inout float bumpHeight) {
+            float sWidth = 0.05;
+            float stripe_coord = mod(x - y, sWidth) / sWidth;
+
+            float minD = min(abs(stripe_coord), min(abs(1.-stripe_coord), abs(stripe_coord-0.5)));
+            bumpHeight *= sqrt(1. - pow(abs(minD/0.23) , 0.5));
         }
 
         void main(void){
@@ -488,8 +502,8 @@
             // float modX = Coord.x - floor(Coord.x);
             // float modY = Coord.y - floor(Coord.y);
             // Apply the checkerboard effect
-            float mX = mod(Coord.x, 2.0 * 2.*paramScale) / (2.*paramScale) - 1.f; // in [-1, 1]
-            float mY = mod(Coord.y, 2.0 * 2.*paramScale) / (2.*paramScale) - 1.f;
+            float mX = mod(Coord.x, 2.*paramScale) / (2.*paramScale); // in [0, 1]
+            float mY = mod(Coord.y, 2.*paramScale) / (2.*paramScale);
 
             vec3 blue = vec3(18.0 / 255., 18.0 / 255., 80.0 / 255.);
             vec3 green = vec3(0.00, 0.40, 0.20);
@@ -500,16 +514,29 @@
 
             vec3 outColor = dark_green;
 
-            outColor = STRIPE(mX, mY, 0.000, 1.000, outColor, blue, true);
-            outColor = STRIPE(mX, mY, 0.000, 0.225, outColor, dark_green, false);
-            outColor = STRIPE(mX, mY, 0.000, 0.225, outColor, green, true);
-            outColor = STRIPE(mX, mY, 0.275, 0.050, outColor, dark, false);
-            outColor = STRIPE(mX, mY, 0.150, 0.020, outColor, red, true);
-            outColor = STRIPE(mX, mY, 0.110, 0.004, outColor, red, true);
-            outColor = STRIPE(mX, mY, 0.325, 0.004, outColor, red, true);
-            outColor = STRIPE(mX, mY, 0.420, 0.020, outColor, red, true);
-            outColor = STRIPE(mX, mY, 0.460, 0.004, outColor, red, true);
-            outColor = STRIPE(mX, mY, 0.000, 0.010, outColor, yellow, true);
+            float bumpHeight = 1.;
+            // base_stripe_bumps(mX, mY, bumpHeight);
+            STRIPE(mX, mY, 0.000, 1.000, bumpHeight, outColor, blue, true);
+            STRIPE(mX, mY, 0.000, 0.225, bumpHeight, outColor, dark_green, false);
+            STRIPE(mX, mY, 0.000, 0.225, bumpHeight, outColor, green, true);
+            STRIPE(mX, mY, 0.275, 0.050, bumpHeight, outColor, dark, false);
+            STRIPE(mX, mY, 0.150, 0.020, bumpHeight, outColor, red, true);
+            STRIPE(mX, mY, 0.110, 0.004, bumpHeight, outColor, red, true);
+            STRIPE(mX, mY, 0.325, 0.004, bumpHeight, outColor, red, true);
+            STRIPE(mX, mY, 0.420, 0.020, bumpHeight, outColor, red, true);
+            STRIPE(mX, mY, 0.460, 0.004, bumpHeight, outColor, red, true);
+            STRIPE(mX, mY, 0.000, 0.010, bumpHeight, outColor, yellow, true);
+
+            // TODO: get bump map working
+            // float dbdx = dFdx(bumpHeight);
+            // float dbdy = dFdy(bumpHeight);
+            // float s = smoothstep(0.15, 0., abs(dbdx) + abs(dbdy));
+            // vec3 bumpedNormal = normalize(Normal - 5.*s*vec3(dbdx, dbdy, 0.));
+            vec3 bumpedNormal = normalize(Normal);
+
+            // pull slightly inward, to reduce sampling artifacts near edges
+            vec2 Point = vec2(0.9 * bumpedNormal.x * 0.5 + 0.5,
+                              0.9 * bumpedNormal.y * 0.5 + 0.5);
 
             gl_FragColor = lightSurfaceMat((1.-alpha) * outColor + alpha * edgeColor, Point);
 
