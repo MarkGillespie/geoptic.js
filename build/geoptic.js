@@ -473,13 +473,13 @@
             if (shift) t = 1.-t;
 
             float minDx = min(abs(x-center), abs(x-(1.-center)));
-            float sx = smoothstep(width-pWidth, width + pWidth, minDx);
-            vec3 newcolorx = (sx)*oldcolor + (1.-sx)* newcolor;
+            float sx = min(width / pWidth, 1.)*(1.-smoothstep(width-pWidth, width + pWidth, minDx));
+            vec3 newcolorx = (1.-sx)*oldcolor + (sx)* newcolor;
             float bumpHeightx = sqrt(1.-(1.-sx)*pow(abs(minDx / width), 0.5));
 
             float minDy = min(abs(y-center), abs(y-(1.-center)));
-            float sy = smoothstep(width, width + pWidth, minDy);
-            vec3 newcolory = (sy)*oldcolor + (1.-sy)* (newcolor+vec3(0.02,0.02,0.02));
+            float sy = min(width / pWidth, 1.)*(1.-smoothstep(width-pWidth, width + pWidth, minDy));
+            vec3 newcolory = (1.-sy)*oldcolor + (sy)* newcolor;
             float bumpHeighty = sqrt(1.-(1.-sy)*pow(abs(minDy / width), 0.5));
 
             bumpHeight *= (t * bumpHeightx + (1.-t)*bumpHeighty);
