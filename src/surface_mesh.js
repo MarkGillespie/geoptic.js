@@ -75,7 +75,6 @@ class SurfaceMesh {
     const options = this.quantities[name]
       ? this.quantities[name].getOptions()
       : {};
-    console.log(options);
     this.quantities[name] = new VertexScalarQuantity(
       name,
       values,
