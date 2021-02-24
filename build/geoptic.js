@@ -3599,13 +3599,12 @@
 
     pick(clickX, clickY) {
       const rect = this.parent.getBoundingClientRect();
-
       const pickResult = evaluatePickQuery(
         this.pickRenderer,
         this.pickScene,
         this.camera,
-        clickX - rect.left,
-        clickY - rect.top,
+        clickX,
+        clickY,
         rect.width,
         rect.height
       );
@@ -3642,13 +3641,17 @@
     }
 
     onMouseClick(event) {
+      const rect = this.parent.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+
       if (
-        event.clientX >= 0 &&
-        event.clientX <= this.container.offsetWidth &&
-        event.clientY >= 0 &&
-        event.clientY <= this.container.offsetHeight
+        x >= 0 &&
+        x <= this.container.offsetWidth &&
+        y >= 0 &&
+        y <= this.container.offsetHeight
       ) {
-        this.pick(event.clientX, event.clientY);
+        this.pick(x, y);
       }
     }
 
