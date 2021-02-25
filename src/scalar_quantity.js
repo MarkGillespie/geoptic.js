@@ -62,6 +62,7 @@ class VertexScalarQuantity {
 
   initGui(guiFolder) {
     this.prefix = this.parent.name + "#" + this.name;
+    this.guiFolder = guiFolder;
 
     guiFolder
       .add(this.options, "enabled")
