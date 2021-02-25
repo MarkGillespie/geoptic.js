@@ -1130,6 +1130,7 @@
 
     initGui(guiFolder) {
       this.prefix = this.parent.name + "#" + this.name;
+      this.guiFolder = guiFolder;
 
       guiFolder
         .add(this.options, "enabled")
@@ -2077,7 +2078,6 @@
       const options = this.quantities[name]
         ? this.quantities[name].getOptions()
         : {};
-      console.log(options);
       this.quantities[name] = new VertexScalarQuantity(
         name,
         values,
