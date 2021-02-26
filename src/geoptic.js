@@ -2,7 +2,6 @@ import * as THREE from "https://unpkg.com/three@0.125.1/build/three.module.js";
 import { TrackballControls } from "https://unpkg.com/three@0.125.1/examples/jsm/controls/TrackballControls.js";
 import { WEBGL } from "https://unpkg.com/three@0.125.1/examples/jsm/WebGL.js";
 import { Reflector } from "https://unpkg.com/three@0.125.1/examples/jsm/objects/Reflector.js";
-import { RGBELoader } from "https://unpkg.com/three@0.125.1/examples/jsm/loaders/RGBELoader.js";
 import Stats from "https://unpkg.com/three@0.125.1/examples/jsm/libs/stats.module.js";
 
 import { GUI } from "https://unpkg.com/dat.gui@0.7.6/build/dat.gui.module.js";
