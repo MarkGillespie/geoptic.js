@@ -478,12 +478,7 @@ class SurfaceMesh {
     threeGeometry.computeVertexNormals();
 
     // create matcap material
-    let matcapMaterial = createMatCapMaterial(
-      this.gp.matcapTextures.r,
-      this.gp.matcapTextures.g,
-      this.gp.matcapTextures.b,
-      this.gp.matcapTextures.k
-    );
+    let matcapMaterial = createMatCapMaterial(this.gp.matcapTextures.rgbk);
 
     // create mesh
     let threeMesh = new Mesh(threeGeometry, matcapMaterial);

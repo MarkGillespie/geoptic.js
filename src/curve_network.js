@@ -173,18 +173,10 @@ class CurveNetwork {
     sphereGeometry.applyMatrix4(mat);
 
     // create matcap materials
-    let tubeMaterial = createCurveMatCapMaterial(
-      this.gp.matcapTextures.r,
-      this.gp.matcapTextures.g,
-      this.gp.matcapTextures.b,
-      this.gp.matcapTextures.k
-    );
+    let tubeMaterial = createCurveMatCapMaterial(this.gp.matcapTextures.rgbk);
     tubeMaterial.uniforms.rad.value = 0.05;
     let sphereMaterial = createInstancedMatCapMaterial(
-      this.gp.matcapTextures.r,
-      this.gp.matcapTextures.g,
-      this.gp.matcapTextures.b,
-      this.gp.matcapTextures.k
+      this.gp.matcapTextures.rgbk
     );
     sphereMaterial.uniforms.scale.value = 0.05;
 

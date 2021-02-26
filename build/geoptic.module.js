@@ -6,10 +6,7 @@ import Stats from 'https://unpkg.com/three@0.125.1/examples/jsm/libs/stats.modul
 import { GUI } from 'https://unpkg.com/dat.gui@0.7.6/build/dat.gui.module.js';
 
 let matcapIncludes = `
-        uniform sampler2D Matcap_r; // Matcap texture
-        uniform sampler2D Matcap_g; // Matcap texture
-        uniform sampler2D Matcap_b; // Matcap texture
-        uniform sampler2D Matcap_k; // Matcap texture
+        uniform sampler2D Matcap_rgbk; // Matcap texture
 `;
 
 let common = `
@@ -30,10 +27,15 @@ let common = `
         }
 
         vec4 lightSurfaceMat(vec3 color, vec2 Normal) {
-            vec4 mat_r = sRGBToLinear(texture2D(Matcap_r, Normal));
-            vec4 mat_g = sRGBToLinear(texture2D(Matcap_g, Normal));
-            vec4 mat_b = sRGBToLinear(texture2D(Matcap_b, Normal));
-            vec4 mat_k = sRGBToLinear(texture2D(Matcap_k, Normal));
+
+            // pull slightly inward, to reduce sampling artifacts near edges
+            // Then divide by 4 to get a coordinate in [-0.25, 0.25]
+            vec2 uv = 0.93 * Normal * 0.25;
+
+            vec4 mat_r = sRGBToLinear(texture2D(Matcap_rgbk, uv + vec2(0.25, 0.75)));
+            vec4 mat_g = sRGBToLinear(texture2D(Matcap_rgbk, uv + vec2(0.75, 0.75)));
+            vec4 mat_b = sRGBToLinear(texture2D(Matcap_rgbk, uv + vec2(0.25, 0.25)));
+            vec4 mat_k = sRGBToLinear(texture2D(Matcap_rgbk, uv + vec2(0.75, 0.25)));
 
             vec4 colorCombined = color.r * mat_r + color.g * mat_g + color.b * mat_b +
                                 (1. - color.r - color.g - color.b) * mat_k;
@@ -42,21 +44,16 @@ let common = `
         }
 `;
 
-function createMatCapMaterial(tex_r, tex_g, tex_b, tex_k) {
+function createMatCapMaterial(tex_rgbk) {
   let vertexShader = `
         attribute vec3 barycoord;
 
-        varying vec2 Point;
+        varying vec3 vNormal;
         varying vec3 Barycoord;
 
         void main()
         {
-            vec3 vNormal = ( mat3( modelViewMatrix ) * normal );
-            vNormal = normalize(vNormal);
-
-            // pull slightly inward, to reduce sampling artifacts near edges
-            Point.x = 0.93 * vNormal.x * 0.5 + 0.5;
-            Point.y = 0.93 * vNormal.y * 0.5 + 0.5;
+            vNormal = ( mat3( modelViewMatrix ) * normal );
 
             Barycoord = barycoord;
 
@@ -71,23 +68,20 @@ function createMatCapMaterial(tex_r, tex_g, tex_b, tex_k) {
         uniform vec3 edgeColor;
         uniform float edgeWidth;
 
-        varying vec2 Point;
+        varying vec3 vNormal;
         varying vec3 Barycoord;
 
         ${common}
 
         void main(void){
             float alpha = getEdgeFactor(Barycoord, vec3(1.,1.,1.), edgeWidth);
-            gl_FragColor = lightSurfaceMat((1.-alpha) * color + alpha * edgeColor, Point);
+            gl_FragColor = lightSurfaceMat((1.-alpha) * color + alpha * edgeColor, normalize(vNormal).xy);
         }
     `;
 
   let Material = new ShaderMaterial({
     uniforms: {
-      Matcap_r: { value: tex_r },
-      Matcap_g: { value: tex_g },
-      Matcap_b: { value: tex_b },
-      Matcap_k: { value: tex_k },
+      Matcap_rgbk: { value: tex_rgbk },
       color: { value: new Vector3(1, 0, 1) },
       edgeColor: { value: new Vector3(0, 0, 0) },
       edgeWidth: { value: 0 },
@@ -100,24 +94,18 @@ function createMatCapMaterial(tex_r, tex_g, tex_b, tex_k) {
   return Material;
 }
 
-function createVertexScalarFunctionMaterial(tex_r, tex_g, tex_b, tex_k) {
+function createVertexScalarFunctionMaterial(tex_rgbk) {
   let vertexShader = `
         attribute vec3 barycoord;
         attribute float value;
 
-        varying vec2 Point;
+        varying vec3 vNormal;
         varying vec3 Barycoord;
         varying float Value;
 
         void main()
         {
-            vec3 vNormal = ( mat3( modelViewMatrix ) * normal );
-            vNormal = normalize(vNormal);
-
-            // pull slightly inward, to reduce sampling artifacts near edges
-            Point.x = 0.93 * vNormal.x * 0.5 + 0.5;
-            Point.y = 0.93 * vNormal.y * 0.5 + 0.5;
-
+            vNormal = ( mat3( modelViewMatrix ) * normal );
             Barycoord = barycoord;
             Value = value;
 
@@ -132,7 +120,7 @@ function createVertexScalarFunctionMaterial(tex_r, tex_g, tex_b, tex_k) {
         uniform vec3 edgeColor;
         uniform float edgeWidth;
 
-        varying vec2 Point;
+        varying vec3 vNormal;
         varying vec3 Barycoord;
         varying float Value;
 
@@ -141,15 +129,12 @@ function createVertexScalarFunctionMaterial(tex_r, tex_g, tex_b, tex_k) {
         void main(void){
             float alpha = getEdgeFactor(Barycoord, vec3(1.,1.,1.), edgeWidth);
             vec3 Color = sRGBToLinear(texture2D(colormap, vec2(Value, 0.5))).rgb;
-            gl_FragColor = lightSurfaceMat((1.-alpha) * Color + alpha * edgeColor, Point);
+            gl_FragColor = lightSurfaceMat((1.-alpha) * Color + alpha * edgeColor, normalize(vNormal).xy);
         }
     `;
   let Material = new ShaderMaterial({
     uniforms: {
-      Matcap_r: { value: tex_r },
-      Matcap_g: { value: tex_g },
-      Matcap_b: { value: tex_b },
-      Matcap_k: { value: tex_k },
+      Matcap_rgbk: { value: tex_rgbk },
       colormap: { value: undefined },
       edgeColor: { value: new Vector3(0, 0, 0) },
       edgeWidth: { value: 0 },
@@ -162,24 +147,18 @@ function createVertexScalarFunctionMaterial(tex_r, tex_g, tex_b, tex_k) {
   return Material;
 }
 
-function createVertexDistanceFunctionMaterial(tex_r, tex_g, tex_b, tex_k) {
+function createVertexDistanceFunctionMaterial(tex_rgbk) {
   let vertexShader = `
         attribute vec3 barycoord;
         attribute float value;
 
-        varying vec2 Point;
+        varying vec3 vNormal;
         varying vec3 Barycoord;
         varying float Value;
 
         void main()
         {
-            vec3 vNormal = ( mat3( modelViewMatrix ) * normal );
-            vNormal = normalize(vNormal);
-
-            // pull slightly inward, to reduce sampling artifacts near edges
-            Point.x = 0.93 * vNormal.x * 0.5 + 0.5;
-            Point.y = 0.93 * vNormal.y * 0.5 + 0.5;
-
+            vNormal = ( mat3( modelViewMatrix ) * normal );
             Barycoord = barycoord;
             Value = value;
 
@@ -196,7 +175,7 @@ function createVertexDistanceFunctionMaterial(tex_r, tex_g, tex_b, tex_k) {
         uniform float scale;
         uniform float offset;
 
-        varying vec2 Point;
+        varying vec3 vNormal;
         varying vec3 Barycoord;
         varying float Value;
 
@@ -223,15 +202,12 @@ function createVertexDistanceFunctionMaterial(tex_r, tex_g, tex_b, tex_k) {
             vec3 outColor = (1.-s)*color1 + s* color2;
 
             float alpha = getEdgeFactor(Barycoord, vec3(1.,1.,1.), edgeWidth);
-            gl_FragColor = lightSurfaceMat((1.-alpha) * outColor + alpha * edgeColor, Point);
+            gl_FragColor = lightSurfaceMat((1.-alpha) * outColor + alpha * edgeColor, normalize(vNormal).xy);
         }
     `;
   let Material = new ShaderMaterial({
     uniforms: {
-      Matcap_r: { value: tex_r },
-      Matcap_g: { value: tex_g },
-      Matcap_b: { value: tex_b },
-      Matcap_k: { value: tex_k },
+      Matcap_rgbk: { value: tex_rgbk },
       colormap: { value: undefined },
       edgeColor: { value: new Vector3(0, 0, 0) },
       edgeWidth: { value: 0 },
@@ -246,24 +222,18 @@ function createVertexDistanceFunctionMaterial(tex_r, tex_g, tex_b, tex_k) {
   return Material;
 }
 
-function VertexParamCheckerboard(tex_r, tex_g, tex_b, tex_k) {
+function VertexParamCheckerboard(tex_rgbk) {
   let vertexShader = `
         attribute vec3 barycoord;
         attribute vec2 coord;
 
-        varying vec2 Point;
+        varying vec3 vNormal;
         varying vec3 Barycoord;
         varying vec2 Coord;
 
         void main()
         {
-            vec3 vNormal = ( mat3( modelViewMatrix ) * normal );
-            vNormal = normalize(vNormal);
-
-            // pull slightly inward, to reduce sampling artifacts near edges
-            Point.x = 0.93 * vNormal.x * 0.5 + 0.5;
-            Point.y = 0.93 * vNormal.y * 0.5 + 0.5;
-
+            vNormal = ( mat3( modelViewMatrix ) * normal );
             Barycoord = barycoord;
             Coord = coord;
 
@@ -280,7 +250,7 @@ function VertexParamCheckerboard(tex_r, tex_g, tex_b, tex_k) {
         uniform vec3 color2;
         uniform float paramScale;
 
-        varying vec2 Point;
+        varying vec3 vNormal;
         varying vec3 Barycoord;
         varying vec2 Coord;
 
@@ -305,17 +275,14 @@ function VertexParamCheckerboard(tex_r, tex_g, tex_b, tex_k) {
 
             vec3 outColor = (1.-s)*color1 + s* color2;
 
-            gl_FragColor = lightSurfaceMat((1.-alpha) * outColor + alpha * edgeColor, Point);
+            gl_FragColor = lightSurfaceMat((1.-alpha) * outColor + alpha * edgeColor, normalize(vNormal).xy);
 
         }
     `;
 
   let Material = new ShaderMaterial({
     uniforms: {
-      Matcap_r: { value: tex_r },
-      Matcap_g: { value: tex_g },
-      Matcap_b: { value: tex_b },
-      Matcap_k: { value: tex_k },
+      Matcap_rgbk: { value: tex_rgbk },
       edgeColor: { value: new Vector3(0, 0, 0) },
       edgeWidth: { value: 0 },
       color1: { value: new Vector3(1, 1, 0) },
@@ -330,24 +297,18 @@ function VertexParamCheckerboard(tex_r, tex_g, tex_b, tex_k) {
   return Material;
 }
 
-function VertexParamGrid(tex_r, tex_g, tex_b, tex_k) {
+function VertexParamGrid(tex_rgbk) {
   let vertexShader = `
         attribute vec3 barycoord;
         attribute vec2 coord;
 
-        varying vec2 Point;
+        varying vec3 vNormal;
         varying vec3 Barycoord;
         varying vec2 Coord;
 
         void main()
         {
-            vec3 vNormal = ( mat3( modelViewMatrix ) * normal );
-            vNormal = normalize(vNormal);
-
-            // pull slightly inward, to reduce sampling artifacts near edges
-            Point.x = 0.93 * vNormal.x * 0.5 + 0.5;
-            Point.y = 0.93 * vNormal.y * 0.5 + 0.5;
-
+            vNormal = ( mat3( modelViewMatrix ) * normal );
             Barycoord = barycoord;
             Coord = coord;
 
@@ -364,7 +325,7 @@ function VertexParamGrid(tex_r, tex_g, tex_b, tex_k) {
         uniform vec3 color2;
         uniform float paramScale;
 
-        varying vec2 Point;
+        varying vec3 vNormal;
         varying vec3 Barycoord;
         varying vec2 Coord;
 
@@ -393,17 +354,14 @@ function VertexParamGrid(tex_r, tex_g, tex_b, tex_k) {
 
             vec3 outColor = (1.-s)*color1 + s* color2;
 
-            gl_FragColor = lightSurfaceMat((1.-alpha) * outColor + alpha * edgeColor, Point);
+            gl_FragColor = lightSurfaceMat((1.-alpha) * outColor + alpha * edgeColor, normalize(vNormal).xy);
 
         }
     `;
 
   let Material = new ShaderMaterial({
     uniforms: {
-      Matcap_r: { value: tex_r },
-      Matcap_g: { value: tex_g },
-      Matcap_b: { value: tex_b },
-      Matcap_k: { value: tex_k },
+      Matcap_rgbk: { value: tex_rgbk },
       edgeColor: { value: new Vector3(0, 0, 0) },
       edgeWidth: { value: 0 },
       color1: { value: new Vector3(1, 1, 0) },
@@ -418,7 +376,7 @@ function VertexParamGrid(tex_r, tex_g, tex_b, tex_k) {
   return Material;
 }
 
-function VertexParamTartan(tex_r, tex_g, tex_b, tex_k) {
+function VertexParamTartan(tex_rgbk) {
   let vertexShader = `
         attribute vec3 barycoord;
         attribute vec2 coord;
@@ -429,8 +387,7 @@ function VertexParamTartan(tex_r, tex_g, tex_b, tex_k) {
 
         void main()
         {
-            vec3 vNormal = ( mat3( modelViewMatrix ) * normal );
-            vNormal = normalize(vNormal);
+            vNormal = ( mat3( modelViewMatrix ) * normal );
 
             Normal = vNormal;
 
@@ -532,20 +489,17 @@ function VertexParamTartan(tex_r, tex_g, tex_b, tex_k) {
             vec3 bumpedNormal = normalize(Normal);
 
             // pull slightly inward, to reduce sampling artifacts near edges
-            vec2 Point = vec2(0.9 * bumpedNormal.x * 0.5 + 0.5,
+            vec2 vNormal = vec2(0.9 * bumpedNormal.x * 0.5 + 0.5,
                               0.9 * bumpedNormal.y * 0.5 + 0.5);
 
-            gl_FragColor = lightSurfaceMat((1.-alpha) * outColor + alpha * edgeColor, Point);
+            gl_FragColor = lightSurfaceMat((1.-alpha) * outColor + alpha * edgeColor, normalize(vNormal).xy);
 
         }
     `;
 
   let Material = new ShaderMaterial({
     uniforms: {
-      Matcap_r: { value: tex_r },
-      Matcap_g: { value: tex_g },
-      Matcap_b: { value: tex_b },
-      Matcap_k: { value: tex_k },
+      Matcap_rgbk: { value: tex_rgbk },
       edgeColor: { value: new Vector3(0, 0, 0) },
       edgeWidth: { value: 0 },
       color1: { value: new Vector3(1, 1, 0) },
@@ -696,20 +650,14 @@ function createSurfaceMeshPickMaterial() {
   return Material;
 }
 
-function createInstancedMatCapMaterial(tex_r, tex_g, tex_b, tex_k) {
+function createInstancedMatCapMaterial(tex_rgbk) {
   let vertexShader = `
         uniform float scale;
-        varying vec2 Point;
+        varying vec3 vNormal;
 
         void main()
         {
-            vec3 vNormal = (modelViewMatrix * instanceMatrix * vec4(normal, 0.)).xyz;
-            vNormal = normalize(vNormal);
-
-            // pull slightly inward, to reduce sampling artifacts near edges
-            Point.x = 0.93 * vNormal.x * 0.5 + 0.5;
-            Point.y = 0.93 * vNormal.y * 0.5 + 0.5;
-
+            vNormal = (modelViewMatrix * instanceMatrix * vec4(normal, 0.)).xyz;
             gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4( scale * position, 1.0 );
 
         }
@@ -719,21 +667,18 @@ function createInstancedMatCapMaterial(tex_r, tex_g, tex_b, tex_k) {
         ${matcapIncludes}
         uniform vec3 color;
 
-        varying vec2 Point;
+        varying vec3 vNormal;
 
         ${common}
 
         void main(void){
-            gl_FragColor = lightSurfaceMat(color, Point);
+            gl_FragColor = lightSurfaceMat(color, normalize(vNormal).xy);
         }
     `;
 
   let Material = new ShaderMaterial({
     uniforms: {
-      Matcap_r: { value: tex_r },
-      Matcap_g: { value: tex_g },
-      Matcap_b: { value: tex_b },
-      Matcap_k: { value: tex_k },
+      Matcap_rgbk: { value: tex_rgbk },
       color: { value: new Vector3(1, 0, 1) },
       scale: { value: 1 },
     },
@@ -745,22 +690,17 @@ function createInstancedMatCapMaterial(tex_r, tex_g, tex_b, tex_k) {
   return Material;
 }
 
-function createInstancedScalarFunctionMaterial(tex_r, tex_g, tex_b, tex_k) {
+function createInstancedScalarFunctionMaterial(tex_rgbk) {
   let vertexShader = `
         uniform float scale;
         attribute float value;
 
         varying float Value;
-        varying vec2 Point;
+        varying vec3 vNormal;
 
         void main()
         {
-            vec3 vNormal = (modelViewMatrix * instanceMatrix * vec4(normal, 0.)).xyz;
-            vNormal = normalize(vNormal);
-
-            // pull slightly inward, to reduce sampling artifacts near edges
-            Point.x = 0.93 * vNormal.x * 0.5 + 0.5;
-            Point.y = 0.93 * vNormal.y * 0.5 + 0.5;
+            vNormal = (modelViewMatrix * instanceMatrix * vec4(normal, 0.)).xyz;
 
             Value = value;
 
@@ -774,22 +714,19 @@ function createInstancedScalarFunctionMaterial(tex_r, tex_g, tex_b, tex_k) {
         uniform sampler2D colormap; // colormap
 
         varying float Value;
-        varying vec2 Point;
+        varying vec3 vNormal;
 
         ${common}
 
         void main(void){
             vec3 Color = sRGBToLinear(texture2D(colormap, vec2(Value, 0.5))).rgb;
-            gl_FragColor = lightSurfaceMat(Color, Point);
+            gl_FragColor = lightSurfaceMat(Color, normalize(vNormal).xy);
         }
     `;
 
   let Material = new ShaderMaterial({
     uniforms: {
-      Matcap_r: { value: tex_r },
-      Matcap_g: { value: tex_g },
-      Matcap_b: { value: tex_b },
-      Matcap_k: { value: tex_k },
+      Matcap_rgbk: { value: tex_rgbk },
       colormap: { value: undefined },
       scale: { value: 1 },
     },
@@ -835,21 +772,16 @@ function createPointCloudPickMaterial() {
   return Material;
 }
 
-function createCurveMatCapMaterial(tex_r, tex_g, tex_b, tex_k) {
+function createCurveMatCapMaterial(tex_rgbk) {
   let vertexShader = `
         uniform float rad;
         attribute float len;
 
-        varying vec2 Point;
+        varying vec3 vNormal;
 
         void main()
         {
-            vec3 vNormal = (modelViewMatrix * instanceMatrix * vec4(normal, 0.)).xyz;
-            vNormal = normalize(vNormal);
-
-            // pull slightly inward, to reduce sampling artifacts near edges
-            Point.x = 0.93 * vNormal.x * 0.5 + 0.5;
-            Point.y = 0.93 * vNormal.y * 0.5 + 0.5;
+            vNormal = (modelViewMatrix * instanceMatrix * vec4(normal, 0.)).xyz;
 
             vec3 scaled_position = vec3(position.x * rad, position.y*rad, position.z*len);
             gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4( scaled_position, 1.0 );
@@ -861,21 +793,18 @@ function createCurveMatCapMaterial(tex_r, tex_g, tex_b, tex_k) {
         ${matcapIncludes}
         uniform vec3 color;
 
-        varying vec2 Point;
+        varying vec3 vNormal;
 
         ${common}
 
         void main(void){
-            gl_FragColor = lightSurfaceMat(color, Point);
+            gl_FragColor = lightSurfaceMat(color, normalize(vNormal).xy);
         }
     `;
 
   let Material = new ShaderMaterial({
     uniforms: {
-      Matcap_r: { value: tex_r },
-      Matcap_g: { value: tex_g },
-      Matcap_b: { value: tex_b },
-      Matcap_k: { value: tex_k },
+      Matcap_rgbk: { value: tex_rgbk },
       color: { value: new Vector3(1, 0, 1) },
       rad: { value: 1 },
     },
@@ -1104,10 +1033,7 @@ class VertexScalarQuantity {
 
     // create a new mesh material
     let functionMaterial = createVertexScalarFunctionMaterial(
-      this.gp.matcapTextures.r,
-      this.gp.matcapTextures.g,
-      this.gp.matcapTextures.b,
-      this.gp.matcapTextures.k
+      this.gp.matcapTextures.rgbk
     );
 
     // build a three.js mesh to visualize the function
@@ -1220,10 +1146,7 @@ class PointCloudScalarQuantity {
 
     // create a new mesh material
     let functionMaterial = createInstancedScalarFunctionMaterial(
-      this.gp.matcapTextures.r,
-      this.gp.matcapTextures.g,
-      this.gp.matcapTextures.b,
-      this.gp.matcapTextures.k
+      this.gp.matcapTextures.rgbk
     );
 
     // create mesh
@@ -1348,10 +1271,7 @@ class VertexDistanceQuantity {
 
     // create a new mesh material
     let functionMaterial = createVertexDistanceFunctionMaterial(
-      this.gp.matcapTextures.r,
-      this.gp.matcapTextures.g,
-      this.gp.matcapTextures.b,
-      this.gp.matcapTextures.k
+      this.gp.matcapTextures.rgbk
     );
 
     // build a three.js mesh to visualize the function
@@ -1560,12 +1480,7 @@ class VertexVectorQuantity {
     tipGeometry.applyMatrix4(mat);
 
     // create matcap material
-    let material = createInstancedMatCapMaterial(
-      this.gp.matcapTextures.r,
-      this.gp.matcapTextures.g,
-      this.gp.matcapTextures.b,
-      this.gp.matcapTextures.k
-    );
+    let material = createInstancedMatCapMaterial(this.gp.matcapTextures.rgbk);
     material.uniforms.scale.value = 0.05;
 
     let nV = this.parent.nV;
@@ -1681,12 +1596,7 @@ class VertexParameterizationQuantity {
     this.isDominantQuantity = true;
 
     // create a new mesh material
-    let functionMaterial = VertexParamCheckerboard(
-      this.gp.matcapTextures.r,
-      this.gp.matcapTextures.g,
-      this.gp.matcapTextures.b,
-      this.gp.matcapTextures.k
-    );
+    let functionMaterial = VertexParamCheckerboard(this.gp.matcapTextures.rgbk);
 
     // build a three.js mesh to visualize the function
     this.mesh = new Mesh(this.parent.mesh.geometry.clone(), functionMaterial);
@@ -1789,32 +1699,17 @@ class VertexParameterizationQuantity {
   setStyle(style) {
     this.options.style = style;
     if (style == "checker") {
-      this.mesh.material = VertexParamCheckerboard(
-        this.gp.matcapTextures.r,
-        this.gp.matcapTextures.g,
-        this.gp.matcapTextures.b,
-        this.gp.matcapTextures.k
-      );
+      this.mesh.material = VertexParamCheckerboard(this.gp.matcapTextures.rgbk);
       for (let elem of this.colorButtons) {
         elem.style.display = "block";
       }
     } else if (style == "grid") {
-      this.mesh.material = VertexParamGrid(
-        this.gp.matcapTextures.r,
-        this.gp.matcapTextures.g,
-        this.gp.matcapTextures.b,
-        this.gp.matcapTextures.k
-      );
+      this.mesh.material = VertexParamGrid(this.gp.matcapTextures.rgbk);
       for (let elem of this.colorButtons) {
         elem.style.display = "block";
       }
     } else if (style == "tartan") {
-      this.mesh.material = VertexParamTartan(
-        this.gp.matcapTextures.r,
-        this.gp.matcapTextures.g,
-        this.gp.matcapTextures.b,
-        this.gp.matcapTextures.k
-      );
+      this.mesh.material = VertexParamTartan(this.gp.matcapTextures.rgbk);
       for (let elem of this.colorButtons) {
         elem.style.display = "none";
       }
@@ -2477,12 +2372,7 @@ class SurfaceMesh {
     threeGeometry.computeVertexNormals();
 
     // create matcap material
-    let matcapMaterial = createMatCapMaterial(
-      this.gp.matcapTextures.r,
-      this.gp.matcapTextures.g,
-      this.gp.matcapTextures.b,
-      this.gp.matcapTextures.k
-    );
+    let matcapMaterial = createMatCapMaterial(this.gp.matcapTextures.rgbk);
 
     // create mesh
     let threeMesh = new Mesh(threeGeometry, matcapMaterial);
@@ -2789,10 +2679,7 @@ class PointCloud {
 
     // create matcap material
     let matcapMaterial = createInstancedMatCapMaterial(
-      this.gp.matcapTextures.r,
-      this.gp.matcapTextures.g,
-      this.gp.matcapTextures.b,
-      this.gp.matcapTextures.k
+      this.gp.matcapTextures.rgbk
     );
 
     // create mesh
@@ -3029,18 +2916,10 @@ class CurveNetwork {
     sphereGeometry.applyMatrix4(mat);
 
     // create matcap materials
-    let tubeMaterial = createCurveMatCapMaterial(
-      this.gp.matcapTextures.r,
-      this.gp.matcapTextures.g,
-      this.gp.matcapTextures.b,
-      this.gp.matcapTextures.k
-    );
+    let tubeMaterial = createCurveMatCapMaterial(this.gp.matcapTextures.rgbk);
     tubeMaterial.uniforms.rad.value = 0.05;
     let sphereMaterial = createInstancedMatCapMaterial(
-      this.gp.matcapTextures.r,
-      this.gp.matcapTextures.g,
-      this.gp.matcapTextures.b,
-      this.gp.matcapTextures.k
+      this.gp.matcapTextures.rgbk
     );
     sphereMaterial.uniforms.scale.value = 0.05;
 
@@ -3301,22 +3180,10 @@ class Geoptic {
 
   initTextures() {
     this.matcapTextures = {
-      r: undefined,
-      g: undefined,
-      b: undefined,
-      k: undefined,
+      rgbk: undefined,
     };
-    this.matcapTextures.r = new TextureLoader().load(
-      this.geopticPath + "/img/clay_r.png"
-    );
-    this.matcapTextures.g = new TextureLoader().load(
-      this.geopticPath + "/img/clay_g.png"
-    );
-    this.matcapTextures.b = new TextureLoader().load(
-      this.geopticPath + "/img/clay_b.png"
-    );
-    this.matcapTextures.k = new TextureLoader().load(
-      this.geopticPath + "/img/clay_k.png"
+    this.matcapTextures.rgbk = new TextureLoader().load(
+      this.geopticPath + "/img/clay_rgbk.png"
     );
 
     // Pre-fetch viridis colormap (default) and rdpu colormap (default for distances)

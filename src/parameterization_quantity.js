@@ -25,12 +25,7 @@ class VertexParameterizationQuantity {
     this.isDominantQuantity = true;
 
     // create a new mesh material
-    let functionMaterial = VertexParamCheckerboard(
-      this.gp.matcapTextures.r,
-      this.gp.matcapTextures.g,
-      this.gp.matcapTextures.b,
-      this.gp.matcapTextures.k
-    );
+    let functionMaterial = VertexParamCheckerboard(this.gp.matcapTextures.rgbk);
 
     // build a three.js mesh to visualize the function
     this.mesh = new Mesh(this.parent.mesh.geometry.clone(), functionMaterial);
@@ -133,32 +128,17 @@ class VertexParameterizationQuantity {
   setStyle(style) {
     this.options.style = style;
     if (style == "checker") {
-      this.mesh.material = VertexParamCheckerboard(
-        this.gp.matcapTextures.r,
-        this.gp.matcapTextures.g,
-        this.gp.matcapTextures.b,
-        this.gp.matcapTextures.k
-      );
+      this.mesh.material = VertexParamCheckerboard(this.gp.matcapTextures.rgbk);
       for (let elem of this.colorButtons) {
         elem.style.display = "block";
       }
     } else if (style == "grid") {
-      this.mesh.material = VertexParamGrid(
-        this.gp.matcapTextures.r,
-        this.gp.matcapTextures.g,
-        this.gp.matcapTextures.b,
-        this.gp.matcapTextures.k
-      );
+      this.mesh.material = VertexParamGrid(this.gp.matcapTextures.rgbk);
       for (let elem of this.colorButtons) {
         elem.style.display = "block";
       }
     } else if (style == "tartan") {
-      this.mesh.material = VertexParamTartan(
-        this.gp.matcapTextures.r,
-        this.gp.matcapTextures.g,
-        this.gp.matcapTextures.b,
-        this.gp.matcapTextures.k
-      );
+      this.mesh.material = VertexParamTartan(this.gp.matcapTextures.rgbk);
       for (let elem of this.colorButtons) {
         elem.style.display = "none";
       }

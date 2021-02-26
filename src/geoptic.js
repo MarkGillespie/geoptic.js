@@ -240,22 +240,10 @@ class Geoptic {
 
   initTextures() {
     this.matcapTextures = {
-      r: undefined,
-      g: undefined,
-      b: undefined,
-      k: undefined,
+      rgbk: undefined,
     };
-    this.matcapTextures.r = new THREE.TextureLoader().load(
-      this.geopticPath + "/img/clay_r.png"
-    );
-    this.matcapTextures.g = new THREE.TextureLoader().load(
-      this.geopticPath + "/img/clay_g.png"
-    );
-    this.matcapTextures.b = new THREE.TextureLoader().load(
-      this.geopticPath + "/img/clay_b.png"
-    );
-    this.matcapTextures.k = new THREE.TextureLoader().load(
-      this.geopticPath + "/img/clay_k.png"
+    this.matcapTextures.rgbk = new THREE.TextureLoader().load(
+      this.geopticPath + "/img/clay_rgbk.png"
     );
 
     // Pre-fetch viridis colormap (default) and rdpu colormap (default for distances)

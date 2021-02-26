@@ -39,10 +39,7 @@ class VertexScalarQuantity {
 
     // create a new mesh material
     let functionMaterial = createVertexScalarFunctionMaterial(
-      this.gp.matcapTextures.r,
-      this.gp.matcapTextures.g,
-      this.gp.matcapTextures.b,
-      this.gp.matcapTextures.k
+      this.gp.matcapTextures.rgbk
     );
 
     // build a three.js mesh to visualize the function
@@ -155,10 +152,7 @@ class PointCloudScalarQuantity {
 
     // create a new mesh material
     let functionMaterial = createInstancedScalarFunctionMaterial(
-      this.gp.matcapTextures.r,
-      this.gp.matcapTextures.g,
-      this.gp.matcapTextures.b,
-      this.gp.matcapTextures.k
+      this.gp.matcapTextures.rgbk
     );
 
     // create mesh

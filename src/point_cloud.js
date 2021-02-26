@@ -180,10 +180,7 @@ class PointCloud {
 
     // create matcap material
     let matcapMaterial = createInstancedMatCapMaterial(
-      this.gp.matcapTextures.r,
-      this.gp.matcapTextures.g,
-      this.gp.matcapTextures.b,
-      this.gp.matcapTextures.k
+      this.gp.matcapTextures.rgbk
     );
 
     // create mesh

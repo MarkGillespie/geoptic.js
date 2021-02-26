@@ -87,12 +87,7 @@ class VertexVectorQuantity {
     tipGeometry.applyMatrix4(mat);
 
     // create matcap material
-    let material = createInstancedMatCapMaterial(
-      this.gp.matcapTextures.r,
-      this.gp.matcapTextures.g,
-      this.gp.matcapTextures.b,
-      this.gp.matcapTextures.k
-    );
+    let material = createInstancedMatCapMaterial(this.gp.matcapTextures.rgbk);
     material.uniforms.scale.value = 0.05;
 
     let nV = this.parent.nV;
