@@ -214,8 +214,8 @@ class Geoptic {
     let tex = new THREE.TextureLoader().load(
       this.geopticPath + "/img/concrete.png"
     );
-    tex.wrapS = THREE.RepeatWrapping;
-    tex.wrapT = THREE.RepeatWrapping;
+    tex.wrapS = THREE.MirroredRepeatWrapping;
+    tex.wrapT = THREE.MirroredRepeatWrapping;
     this.groundPlane = new Reflector(new THREE.PlaneGeometry(100, 100), {
       clipBias: 0.003,
       textureWidth: this.container.offsetWidth * window.devicePixelRatio,

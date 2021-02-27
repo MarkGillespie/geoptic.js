@@ -560,7 +560,7 @@
 
     void main() {
 
-        vec4 mat = vec4(texture2D(tex, 3.*TextureUV).rgb * 0.55 + 0.45, 1.);
+        vec4 mat = vec4(texture2D(tex, 9.*TextureUV).rgb * 0.55 + 0.45, 1.);
         vec4 base = texture2DProj( tDiffuse, vUv);
         float t = onGrid(26.*TextureUV);
 
@@ -3158,8 +3158,8 @@
       let tex = new THREE.TextureLoader().load(
         this.geopticPath + "/img/concrete.png"
       );
-      tex.wrapS = THREE.RepeatWrapping;
-      tex.wrapT = THREE.RepeatWrapping;
+      tex.wrapS = THREE.MirroredRepeatWrapping;
+      tex.wrapT = THREE.MirroredRepeatWrapping;
       this.groundPlane = new Reflector_js.Reflector(new THREE.PlaneGeometry(100, 100), {
         clipBias: 0.003,
         textureWidth: this.container.offsetWidth * window.devicePixelRatio,

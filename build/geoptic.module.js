@@ -1,4 +1,4 @@
-import { ShaderMaterial, Vector3, DoubleSide, WebGLRenderTarget, TextureLoader, Mesh, BufferAttribute, InstancedMesh, InstancedBufferAttribute, CylinderGeometry, Matrix4, Group, Euler, BufferGeometry, IcosahedronGeometry, SphereGeometry, RepeatWrapping, PlaneGeometry, WebGLRenderer, PerspectiveCamera, Scene, Color, AmbientLight, PointLight, Box3 } from 'https://unpkg.com/three@0.125.1/build/three.module.js';
+import { ShaderMaterial, Vector3, DoubleSide, WebGLRenderTarget, TextureLoader, Mesh, BufferAttribute, InstancedMesh, InstancedBufferAttribute, CylinderGeometry, Matrix4, Group, Euler, BufferGeometry, IcosahedronGeometry, SphereGeometry, MirroredRepeatWrapping, PlaneGeometry, WebGLRenderer, PerspectiveCamera, Scene, Color, AmbientLight, PointLight, Box3 } from 'https://unpkg.com/three@0.125.1/build/three.module.js';
 import { TrackballControls } from 'https://unpkg.com/three@0.125.1/examples/jsm/controls/TrackballControls.js';
 import { WEBGL } from 'https://unpkg.com/three@0.125.1/examples/jsm/WebGL.js';
 import { Reflector } from 'https://unpkg.com/three@0.125.1/examples/jsm/objects/Reflector.js';
@@ -557,7 +557,7 @@ let groundPlaneFragmentShader = `
 
     void main() {
 
-        vec4 mat = vec4(texture2D(tex, 3.*TextureUV).rgb * 0.55 + 0.45, 1.);
+        vec4 mat = vec4(texture2D(tex, 9.*TextureUV).rgb * 0.55 + 0.45, 1.);
         vec4 base = texture2DProj( tDiffuse, vUv);
         float t = onGrid(26.*TextureUV);
 
@@ -3155,8 +3155,8 @@ class Geoptic {
     let tex = new TextureLoader().load(
       this.geopticPath + "/img/concrete.png"
     );
-    tex.wrapS = RepeatWrapping;
-    tex.wrapT = RepeatWrapping;
+    tex.wrapS = MirroredRepeatWrapping;
+    tex.wrapT = MirroredRepeatWrapping;
     this.groundPlane = new Reflector(new PlaneGeometry(100, 100), {
       clipBias: 0.003,
       textureWidth: this.container.offsetWidth * window.devicePixelRatio,

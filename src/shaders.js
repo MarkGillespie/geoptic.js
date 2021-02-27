@@ -556,7 +556,7 @@ let groundPlaneFragmentShader = `
 
     void main() {
 
-        vec4 mat = vec4(texture2D(tex, 3.*TextureUV).rgb * 0.55 + 0.45, 1.);
+        vec4 mat = vec4(texture2D(tex, 9.*TextureUV).rgb * 0.55 + 0.45, 1.);
         vec4 base = texture2DProj( tDiffuse, vUv);
         float t = onGrid(26.*TextureUV);
 
