@@ -556,8 +556,8 @@ let groundPlaneFragmentShader = `
 
     void main() {
 
-        vec4 mat = texture2D(tex, TextureUV);
-        vec4 base = texture2DProj( tDiffuse, vUv );
+        vec4 mat = vec4(texture2D(tex, 3.*TextureUV).rgb * 0.55 + 0.45, 1.);
+        vec4 base = texture2DProj( tDiffuse, vUv);
         float t = onGrid(26.*TextureUV);
 
         gl_FragColor = (1.-t) * ((1.-alpha) * vec4( blendOverlay( base.rgb, color ), 1.0 ) + alpha * mat) + t*vec4(0.3,0.3,0.3,1.);

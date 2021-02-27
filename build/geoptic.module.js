@@ -1,4 +1,4 @@
-import { ShaderMaterial, Vector3, DoubleSide, WebGLRenderTarget, TextureLoader, Mesh, BufferAttribute, InstancedMesh, InstancedBufferAttribute, CylinderGeometry, Matrix4, Group, Euler, BufferGeometry, IcosahedronGeometry, SphereGeometry, PlaneGeometry, WebGLRenderer, PerspectiveCamera, Scene, Color, AmbientLight, PointLight, Box3 } from 'https://unpkg.com/three@0.125.1/build/three.module.js';
+import { ShaderMaterial, Vector3, DoubleSide, WebGLRenderTarget, TextureLoader, Mesh, BufferAttribute, InstancedMesh, InstancedBufferAttribute, CylinderGeometry, Matrix4, Group, Euler, BufferGeometry, IcosahedronGeometry, SphereGeometry, RepeatWrapping, PlaneGeometry, WebGLRenderer, PerspectiveCamera, Scene, Color, AmbientLight, PointLight, Box3 } from 'https://unpkg.com/three@0.125.1/build/three.module.js';
 import { TrackballControls } from 'https://unpkg.com/three@0.125.1/examples/jsm/controls/TrackballControls.js';
 import { WEBGL } from 'https://unpkg.com/three@0.125.1/examples/jsm/WebGL.js';
 import { Reflector } from 'https://unpkg.com/three@0.125.1/examples/jsm/objects/Reflector.js';
@@ -557,8 +557,8 @@ let groundPlaneFragmentShader = `
 
     void main() {
 
-        vec4 mat = texture2D(tex, TextureUV);
-        vec4 base = texture2DProj( tDiffuse, vUv );
+        vec4 mat = vec4(texture2D(tex, 3.*TextureUV).rgb * 0.55 + 0.45, 1.);
+        vec4 base = texture2DProj( tDiffuse, vUv);
         float t = onGrid(26.*TextureUV);
 
         gl_FragColor = (1.-t) * ((1.-alpha) * vec4( blendOverlay( base.rgb, color ), 1.0 ) + alpha * mat) + t*vec4(0.3,0.3,0.3,1.);
@@ -3155,6 +3155,8 @@ class Geoptic {
     let tex = new TextureLoader().load(
       this.geopticPath + "/img/concrete.png"
     );
+    tex.wrapS = RepeatWrapping;
+    tex.wrapT = RepeatWrapping;
     this.groundPlane = new Reflector(new PlaneGeometry(100, 100), {
       clipBias: 0.003,
       textureWidth: this.container.offsetWidth * window.devicePixelRatio,
@@ -3164,7 +3166,7 @@ class Geoptic {
     this.groundPlane.material.vertexShader = groundPlaneVertexShader;
     this.groundPlane.material.fragmentShader = groundPlaneFragmentShader;
     this.groundPlane.material.uniforms.tex = { value: tex };
-    this.groundPlane.material.uniforms.alpha = { value: 0.5 };
+    this.groundPlane.material.uniforms.alpha = { value: 0.85 };
     this.groundPlane.geometry.setAttribute(
       "texture_uv",
       new BufferAttribute(Float32Array.from([0, 0, 0, 1, 1, 0, 1, 1]), 2)

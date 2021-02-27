@@ -560,8 +560,8 @@
 
     void main() {
 
-        vec4 mat = texture2D(tex, TextureUV);
-        vec4 base = texture2DProj( tDiffuse, vUv );
+        vec4 mat = vec4(texture2D(tex, 3.*TextureUV).rgb * 0.55 + 0.45, 1.);
+        vec4 base = texture2DProj( tDiffuse, vUv);
         float t = onGrid(26.*TextureUV);
 
         gl_FragColor = (1.-t) * ((1.-alpha) * vec4( blendOverlay( base.rgb, color ), 1.0 ) + alpha * mat) + t*vec4(0.3,0.3,0.3,1.);
@@ -3158,6 +3158,8 @@
       let tex = new THREE.TextureLoader().load(
         this.geopticPath + "/img/concrete.png"
       );
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.RepeatWrapping;
       this.groundPlane = new Reflector_js.Reflector(new THREE.PlaneGeometry(100, 100), {
         clipBias: 0.003,
         textureWidth: this.container.offsetWidth * window.devicePixelRatio,
@@ -3167,7 +3169,7 @@
       this.groundPlane.material.vertexShader = groundPlaneVertexShader;
       this.groundPlane.material.fragmentShader = groundPlaneFragmentShader;
       this.groundPlane.material.uniforms.tex = { value: tex };
-      this.groundPlane.material.uniforms.alpha = { value: 0.5 };
+      this.groundPlane.material.uniforms.alpha = { value: 0.85 };
       this.groundPlane.geometry.setAttribute(
         "texture_uv",
         new THREE.BufferAttribute(Float32Array.from([0, 0, 0, 1, 1, 0, 1, 1]), 2)

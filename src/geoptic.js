@@ -214,6 +214,8 @@ class Geoptic {
     let tex = new THREE.TextureLoader().load(
       this.geopticPath + "/img/concrete.png"
     );
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
     this.groundPlane = new Reflector(new THREE.PlaneGeometry(100, 100), {
       clipBias: 0.003,
       textureWidth: this.container.offsetWidth * window.devicePixelRatio,
@@ -223,7 +225,7 @@ class Geoptic {
     this.groundPlane.material.vertexShader = groundPlaneVertexShader;
     this.groundPlane.material.fragmentShader = groundPlaneFragmentShader;
     this.groundPlane.material.uniforms.tex = { value: tex };
-    this.groundPlane.material.uniforms.alpha = { value: 0.5 };
+    this.groundPlane.material.uniforms.alpha = { value: 0.85 };
     let uvs = new Float32Array(4 * 2);
     this.groundPlane.geometry.setAttribute(
       "texture_uv",
