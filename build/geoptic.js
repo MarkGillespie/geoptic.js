@@ -384,15 +384,13 @@
         attribute vec3 barycoord;
         attribute vec2 coord;
 
-        varying vec3 Normal;
+        varying vec3 vNormal;
         varying vec3 Barycoord;
         varying vec2 Coord;
 
         void main()
         {
             vNormal = ( mat3( modelViewMatrix ) * normal );
-
-            Normal = vNormal;
 
             Barycoord = barycoord;
             Coord = coord;
@@ -410,7 +408,7 @@
         uniform vec3 color2;
         uniform float paramScale;
 
-        varying vec3 Normal;
+        varying vec3 vNormal;
         varying vec3 Barycoord;
         varying vec2 Coord;
 
@@ -488,12 +486,12 @@
             // float dbdx = dFdx(bumpHeight);
             // float dbdy = dFdy(bumpHeight);
             // float s = smoothstep(0.15, 0., abs(dbdx) + abs(dbdy));
-            // vec3 bumpedNormal = normalize(Normal - 5.*s*vec3(dbdx, dbdy, 0.));
-            vec3 bumpedNormal = normalize(Normal);
+            // vec3 bumpedNormal = normalize(vNormal - 5.*s*vec3(dbdx, dbdy, 0.));
+            vec3 bumpedNormal = normalize(vNormal);
 
             // pull slightly inward, to reduce sampling artifacts near edges
-            vec2 vNormal = vec2(0.9 * bumpedNormal.x * 0.5 + 0.5,
-                              0.9 * bumpedNormal.y * 0.5 + 0.5);
+            // vec2 vNormalBetter = vec2(0.9 * bumpedNormal.x * 0.5 + 0.5,
+            //                   0.9 * bumpedNormal.y * 0.5 + 0.5);
 
             gl_FragColor = lightSurfaceMat((1.-alpha) * outColor + alpha * edgeColor, normalize(vNormal).xy);
 
