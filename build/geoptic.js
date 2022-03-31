@@ -3247,7 +3247,11 @@
       this.geopticOptions
         .add(this.structureGuiFields, "GroundPlane#Enabled")
         .onChange((e) => {
-          this.setGroundPLaneEnabled(e);
+          if (e) {
+            this.scene.add(this.groundPlane);
+          } else {
+            this.scene.remove(this.groundPlane);
+          }
         })
         .listen()
         .name("Ground Plane");
