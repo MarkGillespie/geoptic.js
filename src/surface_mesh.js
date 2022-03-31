@@ -36,10 +36,8 @@ class SurfaceMesh {
     // build three.js mesh
     [this.mesh, this.geo] = this.constructThreeMesh(coords, faces);
 
-    [
-      this.smoothVertexNormals,
-      this.smoothCornerNormals,
-    ] = this.computeSmoothNormals();
+    [this.smoothVertexNormals, this.smoothCornerNormals] =
+      this.computeSmoothNormals();
 
     if (this.gp.doPicks)
       this.pickMesh = this.constructThreePickMesh(coords, faces);
@@ -111,6 +109,9 @@ class SurfaceMesh {
     const options = this.quantities[name]
       ? this.quantities[name].getOptions()
       : {};
+    if (this.quantities[name]) {
+      this.disableQuantity(this.quantities[name]);
+    }
     values = standardizeVector3Array(values);
     this.quantities[name] = new VertexVectorQuantity(
       name,

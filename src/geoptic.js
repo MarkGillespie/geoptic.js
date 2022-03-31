@@ -294,11 +294,7 @@ class Geoptic {
     this.geopticOptions
       .add(this.structureGuiFields, "GroundPlane#Enabled")
       .onChange((e) => {
-        if (e) {
-          this.scene.add(this.groundPlane);
-        } else {
-          this.scene.remove(this.groundPlane);
-        }
+        this.setGroundPLaneEnabled(e);
       })
       .listen()
       .name("Ground Plane");
@@ -384,9 +380,8 @@ class Geoptic {
     vertexCoordinates = standardizeVector3Array(vertexCoordinates);
 
     if (!this.structureGuiCurveNetworks) {
-      this.structureGuiCurveNetworks = this.structureGui.addFolder(
-        "Curve Networks"
-      );
+      this.structureGuiCurveNetworks =
+        this.structureGui.addFolder("Curve Networks");
       this.structureGuiCurveNetworks.open();
     }
 
@@ -431,9 +426,8 @@ class Geoptic {
   registerPointCloud(name, vertexCoordinates) {
     vertexCoordinates = standardizeVector3Array(vertexCoordinates);
     if (!this.structureGuiPointClouds) {
-      this.structureGuiPointClouds = this.structureGui.addFolder(
-        "Point Clouds"
-      );
+      this.structureGuiPointClouds =
+        this.structureGui.addFolder("Point Clouds");
       this.structureGuiPointClouds.open();
     }
 
@@ -601,6 +595,15 @@ class Geoptic {
     this.renderer.setScissor(0.0, 0.0, width, this.container.offsetHeight);
     this.renderer.setScissorTest(true);
     this.renderer.render(this.scene, this.camera);
+  }
+
+  setGroundPlaneEnabled(enabled) {
+    this.structureGuiFields["GroundPlane#Enabled"] = enabled;
+    if (enabled) {
+      this.scene.add(this.groundPlane);
+    } else {
+      this.scene.remove(this.groundPlane);
+    }
   }
 
   message(str) {

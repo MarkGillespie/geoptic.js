@@ -96,9 +96,19 @@ class VertexVectorQuantity {
 
     mat = new Matrix4();
     for (let iV = 0; iV < nV; iV++) {
-      let pos = this.parent.coords.get(iV);
-      let v = directions.get(iV);
-      mat.lookAt(v, new Vector3(0, 0, 0), new Vector3(0, 0, 1));
+      let pos = this.parent.coords[iV];
+      let v = new Vector3(
+        directions[iV][0],
+        directions[iV][1],
+        directions[iV][2]
+      );
+      let up = new Vector3();
+      up.crossVectors(v, new Vector3(0, 0, 1));
+      if (up.length() < 0.01 * v.length()) {
+        up = new Vector3();
+        up.crossVectors(v, new Vector3(0, 1, 0));
+      }
+      mat.lookAt(v, new Vector3(0, 0, 0), up);
       mat.setPosition(pos[0], pos[1], pos[2]);
       this.torsoMesh.setMatrixAt(iV, mat);
       this.tipMesh.setMatrixAt(iV, mat);
