@@ -201,6 +201,7 @@ class VertexVectorQuantity {
   getFaceValue(iE) {
     return undefined;
   }
+  remove() {}
 }
 
 export { VertexVectorQuantity };
