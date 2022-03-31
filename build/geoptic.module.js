@@ -1592,6 +1592,7 @@ class VertexVectorQuantity {
   getFaceValue(iE) {
     return undefined;
   }
+  remove() {}
 }
 
 class VertexParameterizationQuantity {
@@ -3292,7 +3293,7 @@ class Geoptic {
 
     // If there's an existing strucure with this name,
     // copy its properties and delete it
-    const options = {};
+    let options = {};
     if (this.surfaceMeshes[name]) {
       options = this.surfaceMeshes[name].getOptions();
       this.deregisterSurfaceMesh(name);
