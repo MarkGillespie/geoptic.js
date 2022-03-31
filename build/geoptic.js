@@ -1490,9 +1490,19 @@
 
       mat = new THREE.Matrix4();
       for (let iV = 0; iV < nV; iV++) {
-        let pos = this.parent.coords.get(iV);
-        let v = directions.get(iV);
-        mat.lookAt(v, new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, 1));
+        let pos = this.parent.coords[iV];
+        let v = new THREE.Vector3(
+          directions[iV][0],
+          directions[iV][1],
+          directions[iV][2]
+        );
+        let up = new THREE.Vector3();
+        up.crossVectors(v, new THREE.Vector3(0, 0, 1));
+        if (up.length() < 0.01 * v.length()) {
+          up = new THREE.Vector3();
+          up.crossVectors(v, new THREE.Vector3(0, 1, 0));
+        }
+        mat.lookAt(v, new THREE.Vector3(0, 0, 0), up);
         mat.setPosition(pos[0], pos[1], pos[2]);
         this.torsoMesh.setMatrixAt(iV, mat);
         this.tipMesh.setMatrixAt(iV, mat);
@@ -1932,10 +1942,8 @@
       // build three.js mesh
       [this.mesh, this.geo] = this.constructThreeMesh(coords, faces);
 
-      [
-        this.smoothVertexNormals,
-        this.smoothCornerNormals,
-      ] = this.computeSmoothNormals();
+      [this.smoothVertexNormals, this.smoothCornerNormals] =
+        this.computeSmoothNormals();
 
       if (this.gp.doPicks)
         this.pickMesh = this.constructThreePickMesh(coords, faces);
@@ -2007,6 +2015,9 @@
       const options = this.quantities[name]
         ? this.quantities[name].getOptions()
         : {};
+      if (this.quantities[name]) {
+        this.disableQuantity(this.quantities[name]);
+      }
       values = standardizeVector3Array(values);
       this.quantities[name] = new VertexVectorQuantity(
         name,
@@ -3235,11 +3246,7 @@
       this.geopticOptions
         .add(this.structureGuiFields, "GroundPlane#Enabled")
         .onChange((e) => {
-          if (e) {
-            this.scene.add(this.groundPlane);
-          } else {
-            this.scene.remove(this.groundPlane);
-          }
+          this.setGroundPLaneEnabled(e);
         })
         .listen()
         .name("Ground Plane");
@@ -3325,9 +3332,8 @@
       vertexCoordinates = standardizeVector3Array(vertexCoordinates);
 
       if (!this.structureGuiCurveNetworks) {
-        this.structureGuiCurveNetworks = this.structureGui.addFolder(
-          "Curve Networks"
-        );
+        this.structureGuiCurveNetworks =
+          this.structureGui.addFolder("Curve Networks");
         this.structureGuiCurveNetworks.open();
       }
 
@@ -3372,9 +3378,8 @@
     registerPointCloud(name, vertexCoordinates) {
       vertexCoordinates = standardizeVector3Array(vertexCoordinates);
       if (!this.structureGuiPointClouds) {
-        this.structureGuiPointClouds = this.structureGui.addFolder(
-          "Point Clouds"
-        );
+        this.structureGuiPointClouds =
+          this.structureGui.addFolder("Point Clouds");
         this.structureGuiPointClouds.open();
       }
 
@@ -3542,6 +3547,15 @@
       this.renderer.setScissor(0.0, 0.0, width, this.container.offsetHeight);
       this.renderer.setScissorTest(true);
       this.renderer.render(this.scene, this.camera);
+    }
+
+    setGroundPlaneEnabled(enabled) {
+      this.structureGuiFields["GroundPlane#Enabled"] = enabled;
+      if (enabled) {
+        this.scene.add(this.groundPlane);
+      } else {
+        this.scene.remove(this.groundPlane);
+      }
     }
 
     message(str) {
